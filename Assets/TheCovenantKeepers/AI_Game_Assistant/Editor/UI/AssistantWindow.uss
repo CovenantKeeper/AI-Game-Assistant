@@ -1,0 +1,45 @@
+/* --- Main Layout --- */
+.pane {
+    padding: 10px;
+}
+
+#left-pane {
+    flex-direction: column;
+    width: 380px;
+    min-width: 320px;
+    max-width: 500px;
+}
+
+#masterlist-listview {
+    flex-grow: 1;
+}
+
+/* --- Headers and Groups --- */
+.group-box {
+    border-width: 1px;
+    border-color: rgb(50, 50, 50);
+    border-radius: 4px;
+    padding: 10px;
+    margin-top: 15px;
+}
+
+.group-header {
+    font-size: 14px;
+    -unity-font-style: bold;
+    margin-left: -5px;
+    margin-top: -5px;
+    margin-bottom: 10px;
+}
+
+.details-panel {
+    display: none; /* Panels are hidden by default */
+}
+
+/* --- Text Fields --- */
+#ai-prompt-field .unity-base-text-field__input {
+    min-height: 80px;
+}
+
+.unity-text-field--multiline .unity-base-text-field__input {
+    min-height: 60px;
+}

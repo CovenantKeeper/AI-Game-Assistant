@@ -1,0 +1,154 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <ui:Style src="AssistantWindow.uss" />
+    <ui:VisualElement name="main-container" style="flex-direction: row; flex-grow: 1;">
+
+        <ui:VisualElement name="left-pane" class="pane">
+            <ui:ScrollView>
+                <ui:VisualElement class="group-box">
+                    <ui:Label text="Masterlist Controls" class="group-header" />
+                    <uie:EnumField name="masterlist-type-field" label="Masterlist Type" />
+                    <uie:DropdownField name="file-selection-dropdown" label="Load Saved List" />
+                </ui:VisualElement>
+
+                <ui:VisualElement class="group-box">
+                    <ui:Label text="CSV Generation" class="group-header" />
+                    <uie:EnumField name="provider-field" label="AI Provider" />
+                    <ui:TextField name="ai-prompt-field" label="Prompt" multiline="true" />
+                    <ui:Button name="generate-button" text="Generate New List" style="margin-top: 5px;" />
+                </ui:VisualElement>
+
+                <ui:VisualElement class="group-box">
+                    <ui:Label text="Script Generation" class="group-header" />
+                    <ui:TextField name="script-classname-field" label="Class Name" value="NewBehaviour" />
+                    <ui:TextField name="script-savefolder-field" label="Save Folder" value="Assets/Scripts/Generated" />
+                    <ui:Button name="generate-script-button" text="Generate C# Script" style="margin-top: 5px;" />
+                </ui:VisualElement>
+                
+                <ui:ListView name="masterlist-listview" style="flex-grow: 1; margin-top: 10px; min-height: 200px;" />
+            </ui:ScrollView>
+        </ui:VisualElement>
+        <ui:VisualElement>
+            <ui:ScrollView>
+                <ui:VisualElement name="right-pane" class="pane" style="flex-grow: 1; display: none;">
+
+                    <ui:VisualElement name="character-details-panel" class="details-panel">
+                      <ui:VisualElement class="group-box">
+                        <ui:Label text="Identity" class="group-header" />
+                        <ui:TextField name="char-name-field" label="Name" readonly="true" />
+                        <ui:TextField name="char-type-field" label="Type" readonly="true" />
+                        <ui:TextField name="char-role-field" label="Role" readonly="true" />
+                        <ui:TextField name="char-affiliation-field" label="Affiliation" readonly="true" />
+                        <ui:TextField name="char-class-field" label="Class" readonly="true" />
+                        <ui:TextField name="char-faction-field" label="Faction" readonly="true" />
+                        <ui:TextField name="char-element-field" label="Element" readonly="true" />
+                        <ui:TextField name="char-gender-field" label="Gender" readonly="true" />
+                      </ui:VisualElement>
+
+                      <ui:VisualElement class="group-box">
+                        <ui:Label text="Stats" class="group-header" />
+                        <uie:IntegerField name="char-health-field" label="Health" readonly="true" />
+                        <uie:IntegerField name="char-mana-field" label="Mana" readonly="true" />
+                        <uie:IntegerField name="char-attack-field" label="Attack" readonly="true" />
+                        <uie:IntegerField name="char-defense-field" label="Defense" readonly="true" />
+                        <uie:IntegerField name="char-magic-field" label="Magic" readonly="true" />
+                        <uie:FloatField   name="char-speed-field" label="Speed" readonly="true" />
+                      </ui:VisualElement>
+
+                      <ui:VisualElement class="group-box">
+                        <ui:Label text="Lore &amp; Model" class="group-header" />
+                        <ui:TextField name="char-ultimate-field" label="Ultimate Ability" readonly="true" />
+                        <ui:TextField name="char-lore-field" label="Lore Background" multiline="true" readonly="true" />
+                        <ui:TextField name="char-modelpath-field" label="Model Path" readonly="true" />
+                      </ui:VisualElement>
+                    </ui:VisualElement>
+
+                    <ui:VisualElement name="ability-details-panel" class="details-panel">
+                      <ui:VisualElement class="group-box">
+                        <ui:Label text="Ability" class="group-header" />
+                        <ui:TextField name="ability-id-field"   label="Ability ID" readonly="true" />
+                        <ui:TextField name="ability-name-field" label="Name" readonly="true" />
+                        <ui:TextField name="ability-type-field" label="Type" readonly="true" />
+                        <ui:TextField name="ability-target-field" label="Target Type" readonly="true" />
+                        <ui:TextField name="ability-desc-field" label="Description" multiline="true" readonly="true" />
+                      </ui:VisualElement>
+                      <ui:VisualElement class="group-box">
+                        <ui:Label text="Numbers" class="group-header" />
+                        <uie:FloatField   name="ability-range-field"    label="Range" readonly="true" />
+                        <uie:IntegerField name="ability-manacost-field" label="Mana Cost" readonly="true" />
+                        <uie:FloatField   name="ability-cooldown-field" label="Cooldown (s)" readonly="true" />
+                        <uie:FloatField   name="ability-casttime-field" label="Cast Time (s)" readonly="true" />
+                        <uie:FloatField   name="ability-damage-field"   label="Damage" readonly="true" />
+                        <uie:FloatField   name="ability-heal-field"     label="Healing" readonly="true" />
+                        <uie:IntegerField name="ability-reqlevel-field" label="Required Level" readonly="true" />
+                      </ui:VisualElement>
+                    </ui:VisualElement>
+
+                    <ui:VisualElement name="quest-details-panel" class="details-panel">
+                        <ui:VisualElement class="group-box">
+                            <ui:Label text="Quest Details" class="group-header" />
+                            <ui:TextField name="quest-title-field" label="Title" readonly="true" />
+                            <ui:TextField name="quest-objective-field" label="Objective" readonly="true" multiline="true" />
+                            <ui:TextField name="quest-type-field" label="Type" readonly="true" />
+                            <ui:TextField name="quest-reward-field" label="Reward" readonly="true" />
+                            <ui:TextField name="quest-region-field" label="Region" readonly="true" />
+                            <ui:TextField name="quest-lore-field" label="Lore" readonly="true" multiline="true" />
+                            <ui:TextField name="quest-prefab-field" label="Prefab Path" readonly="true" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+
+                    <ui:VisualElement name="location-details-panel" class="details-panel">
+                        <ui:VisualElement class="group-box">
+                            <ui:Label text="Location Details" class="group-header" />
+                            <ui:TextField name="location-name-field" label="Name" readonly="true" />
+                            <ui:TextField name="location-region-field" label="Region" readonly="true" />
+                            <ui:TextField name="location-type-field" label="Type" readonly="true" />
+                            <ui:TextField name="location-faction-field" label="Faction" readonly="true" />
+                            <uie:IntegerField name="location-danger-field" label="Danger Level" readonly="true" />
+                            <ui:TextField name="location-lore-field" label="Lore" readonly="true" multiline="true" />
+                            <ui:TextField name="location-prefab-field" label="Prefab Path" readonly="true" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+
+                    <ui:VisualElement name="item-details-panel" class="details-panel">
+                      <ui:VisualElement class="group-box">
+                        <ui:Label text="Item Identity" class="group-header" />
+                        <ui:TextField name="item-id-field" label="Item ID" readonly="true" />
+                        <ui:TextField name="item-name-field" label="Name" readonly="true" />
+                        <ui:TextField name="item-type-field" label="Type" readonly="true" />
+                        <ui:TextField name="item-subtype-field" label="Sub-Type" readonly="true" />
+                        <ui:TextField name="item-desc-field" label="Description" multiline="true" readonly="true" />
+                      </ui:VisualElement>
+
+                      <ui:VisualElement class="group-box">
+                        <ui:Label text="Economy &amp; Use" class="group-header" />
+                        <uie:IntegerField name="item-buy-field" label="Value (Buy)" readonly="true" />
+                        <uie:IntegerField name="item-sell-field" label="Value (Sell)" readonly="true" />
+                        <uie:FloatField   name="item-weight-field" label="Weight" readonly="true" />
+                        <ui:Toggle        name="item-usable-field" label="Is Usable" readonly="true" />
+                        <ui:Toggle        name="item-equippable-field" label="Is Equippable" readonly="true" />
+                        <ui:TextField     name="item-equipslot-field" label="Equipment Slot" readonly="true" />
+                        <ui:TextField     name="item-useeffect-field" label="Use Effect" readonly="true" />
+                        <uie:IntegerField name="item-reqlevel-field" label="Required Level" readonly="true" />
+                      </ui:VisualElement>
+
+                      <ui:VisualElement class="group-box">
+                        <ui:Label text="Stat Modifiers" class="group-header" />
+                        <ui:TextField name="item-mod1-type-field" label="Modifier 1 Type" readonly="true" />
+                        <ui:TextField name="item-mod1-val-field"  label="Modifier 1 Value" readonly="true" />
+                        <ui:TextField name="item-mod2-type-field" label="Modifier 2 Type" readonly="true" />
+                        <ui:TextField name="item-mod2-val-field"  label="Modifier 2 Value" readonly="true" />
+                      </ui:VisualElement>
+
+                      <ui:VisualElement class="group-box">
+                        <ui:Label text="Crafting &amp; Paths" class="group-header" />
+                        <ui:TextField name="item-crafting-field"   label="Crafting Materials" readonly="true" />
+                        <ui:TextField name="item-notes-field"      label="Notes" readonly="true" />
+                        <ui:TextField name="item-prefabpath-field" label="Prefab Path" readonly="true" />
+                      </ui:VisualElement>
+                    </ui:VisualElement>
+
+                </ui:VisualElement>
+            </ui:ScrollView>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

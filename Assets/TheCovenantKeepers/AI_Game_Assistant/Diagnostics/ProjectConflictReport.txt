@@ -1,0 +1,94 @@
+=== TheCovenantKeepers: Project Conflict Report ===
+Scanned at: 2025-08-28 11:29:02 AM
+Assets root: C:/Covenant Keeping Games/Legends of the Covenant/Assets
+C# files: 178, Text-like files: 197
+
+---- Studio Root Status ----
+OK: Studio root exists: Assets/TheCovenantKeepers
+
+---- Legacy assistant folder residue ----
+(no legacy folder found)
+
+---- Duplicate C# filenames (same basename in multiple locations) ----
+(none)
+
+---- Duplicate type names across files (class/struct/enum/interface) ----
+• AIProvider
+    Assets/TheCovenantKeepers/AI_Game_Assistant/Scripts/AIProvider.cs
+    Assets/TheCovenantKeepers/AI_Game_Assistant/Editor/UI/AssistantWindow.cs
+• name
+    Assets/TheCovenantKeepers/AI_Game_Assistant/Scripts/ChatGPTClient.cs
+    Assets/TheCovenantKeepers/AI_Game_Assistant/Scripts/GeminiClient.cs
+• e
+    Assets/ExplosiveLLC/RPG Character Mecanim Animation Pack/Code/Actions/BaseActionHandler.cs
+    Assets/ExplosiveLLC/RPG Character Mecanim Animation Pack/Code/Actions/InstantActionHandler.cs
+• SuperCharacterController
+    Assets/ExplosiveLLC/SuperCharacterController/Code/Core/IgnoredCollider.cs
+    Assets/ExplosiveLLC/SuperCharacterController/Code/Core/SuperCharacterController.cs
+    Assets/ExplosiveLLC/SuperCharacterController/Code/Core/SuperGround.cs
+• to
+    Assets/ExplosiveLLC/SuperCharacterController/Code/Core/SuperCollisionType.cs
+    Assets/GabrielAguiarProductions/Plugins/Pixelplacement/iTween/iTween.cs
+• State
+    Assets/ExplosiveLLC/SuperCharacterController/Code/Core/SuperStateMachine.cs
+    Assets/ExplosiveLLC/SuperCharacterController/Code/Examples/SimpleStateMachine.cs
+
+---- Old namespace usage (should be TheCovenantKeepers.AI_Game_Assistant) ----
+• Assets/TheCovenantKeepers/AI_Game_Assistant/Diagnostics/NamespaceFixer.cs
+• Assets/TheCovenantKeepers/AI_Game_Assistant/Editor/SetupValidatorWindow.cs
+• Assets/TheCovenantKeepers/AI_Game_Assistant/Editor/StudioFolderMigrator.cs
+• Assets/TheCovenantKeepers/AI_Game_Assistant/Scripts/AbilityData.cs
+• Assets/TheCovenantKeepers/AI_Game_Assistant/Scripts/AbilityDatabase.cs
+• Assets/TheCovenantKeepers/AI_Game_Assistant/Scripts/AIProvider.cs
+• Assets/TheCovenantKeepers/AI_Game_Assistant/Scripts/AnimatorPresetLibrary.cs
+• Assets/TheCovenantKeepers/AI_Game_Assistant/Scripts/AssistantPaths.cs
+• Assets/TheCovenantKeepers/AI_Game_Assistant/Scripts/CharacterData.cs
+• Assets/TheCovenantKeepers/AI_Game_Assistant/Scripts/CharacterDataBase.cs
+• Assets/TheCovenantKeepers/AI_Game_Assistant/Scripts/ChatGPTClient.cs
+• Assets/TheCovenantKeepers/AI_Game_Assistant/Scripts/ChatGPTSettings.cs
+• Assets/TheCovenantKeepers/AI_Game_Assistant/Scripts/DallEClient.cs
+• Assets/TheCovenantKeepers/AI_Game_Assistant/Scripts/GeminiClient.cs
+• Assets/TheCovenantKeepers/AI_Game_Assistant/Scripts/GenericPrefabCreator.cs
+• Assets/TheCovenantKeepers/AI_Game_Assistant/Scripts/InputSupportUtility.cs
+• Assets/TheCovenantKeepers/AI_Game_Assistant/Scripts/ItemData.cs
+• Assets/TheCovenantKeepers/AI_Game_Assistant/Scripts/ItemDatabase.cs
+• Assets/TheCovenantKeepers/AI_Game_Assistant/Scripts/LocationData.cs
+• Assets/TheCovenantKeepers/AI_Game_Assistant/Scripts/LocationDatabase.cs
+• Assets/TheCovenantKeepers/AI_Game_Assistant/Scripts/PrefabRecipe.cs
+• Assets/TheCovenantKeepers/AI_Game_Assistant/Scripts/PromptProcessor.cs
+• Assets/TheCovenantKeepers/AI_Game_Assistant/Scripts/QuestData.cs
+• Assets/TheCovenantKeepers/AI_Game_Assistant/Scripts/QuestDatabase.cs
+• Assets/TheCovenantKeepers/AI_Game_Assistant/Scripts/RuntimeTestSpawner.cs
+• Assets/TheCovenantKeepers/AI_Game_Assistant/Scripts/ScriptTemplate.cs
+• Assets/TheCovenantKeepers/AI_Game_Assistant/Editor/Diagnostics/ProjectConflictScanner.cs
+• Assets/TheCovenantKeepers/AI_Game_Assistant/Editor/UI/AssistantWindow.cs
+• Assets/TheCovenantKeepers/AI_Game_Assistant/Scripts/Generated/AutoRotate.cs
+• Assets/TheCovenantKeepers/AI_Game_Assistant/Scripts/Utilities/CSVUtility.cs
+• Assets/TheCovenantKeepers/AI_Game_Assistant/Scripts/Utilities/ModelPreviewUtility.cs
+
+---- PromptProcessor definitions ----
+• Assets/TheCovenantKeepers/AI_Game_Assistant/Scripts/PromptProcessor.cs
+
+---- Header usage (where each schema string appears) ----
+• Character (Legacy):
+    Assets/TheCovenantKeepers/AI_Game_Assistant/Scripts/PromptProcessor.cs
+    Assets/TheCovenantKeepers/AI_Game_Assistant/Data/Characters/Generated_CharacterMasterlist_20250828_110144.csv
+    Assets/TheCovenantKeepers/AI_Game_Assistant/Data/Characters/Generated_CharacterMasterlist_20250828_111508.csv
+    Assets/TheCovenantKeepers/AI_Game_Assistant/Editor/Diagnostics/ProjectConflictScanner.cs
+• Character (ID-First):
+    Assets/TheCovenantKeepers/AI_Game_Assistant/Editor/Diagnostics/ProjectConflictScanner.cs
+• Item:
+    Assets/TheCovenantKeepers/AI_Game_Assistant/Scripts/PromptProcessor.cs
+    Assets/TheCovenantKeepers/AI_Game_Assistant/Editor/Diagnostics/ProjectConflictScanner.cs
+• Ability:
+    Assets/TheCovenantKeepers/AI_Game_Assistant/Scripts/PromptProcessor.cs
+    Assets/TheCovenantKeepers/AI_Game_Assistant/Editor/Diagnostics/ProjectConflictScanner.cs
+• Quest:
+    Assets/TheCovenantKeepers/AI_Game_Assistant/Scripts/PromptProcessor.cs
+    Assets/TheCovenantKeepers/AI_Game_Assistant/Data/Quests/Generated_QuestMasterlist_20250828_043547.csv
+    Assets/TheCovenantKeepers/AI_Game_Assistant/Data/Quests/Generated_QuestMasterlist_20250828_094259.csv
+    Assets/TheCovenantKeepers/AI_Game_Assistant/Editor/Diagnostics/ProjectConflictScanner.cs
+• Location:
+    Assets/TheCovenantKeepers/AI_Game_Assistant/Scripts/PromptProcessor.cs
+    Assets/TheCovenantKeepers/AI_Game_Assistant/Editor/Diagnostics/ProjectConflictScanner.cs
+
