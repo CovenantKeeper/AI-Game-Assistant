@@ -59,7 +59,7 @@ namespace TheCovenantKeepers.AI_Game_Assistant
         /// <summary>
         /// Escapes a single field for CSV format by adding quotes if it contains a comma or quotes.
         /// </summary>
-        private static string EscapeCsvField(string field)
+        public static string EscapeCsvField(string field)
         {
             if (string.IsNullOrEmpty(field))
             {

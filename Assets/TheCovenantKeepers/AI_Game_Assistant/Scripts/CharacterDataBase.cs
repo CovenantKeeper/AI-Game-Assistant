@@ -1,176 +1,111 @@
-using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Reflection;
+using System.Linq;
 using UnityEngine;
 
 namespace TheCovenantKeepers.AI_Game_Assistant
 {
     public static class CharacterDatabase
     {
-        public static readonly List<CharacterData> Characters = new List<CharacterData>();
-
-        public static void LoadCharacterMasterlist(string assetCsvPath)
+        /// <summary>
+        /// Loads a character list from a CSV file.
+        /// </summary>
+        public static List<CharacterData> LoadCharacters(string path)
         {
-            Characters.Clear();
+            var characters = new List<CharacterData>();
 
-            if (string.IsNullOrEmpty(assetCsvPath) || !File.Exists(assetCsvPath))
+            if (!File.Exists(path))
             {
-                Debug.LogWarning($"CharacterDatabase: CSV not found at '{assetCsvPath}'.");
-                return;
+                Debug.LogWarning($"[CharacterDatabase] No character CSV found at {path}");
+                return characters;
             }
 
-            var lines = File.ReadAllLines(assetCsvPath);
-            if (lines.Length == 0) { Debug.LogWarning("CharacterDatabase: CSV is empty."); return; }
+            string[] lines = File.ReadAllLines(path);
+            if (lines.Length <= 1)
+            {
+                Debug.LogWarning($"[CharacterDatabase] Character CSV is empty or missing header at {path}");
+                return characters;
+            }
 
-            // Header
-            var header = SplitCsv(lines[0]).ToArray();
-            var normHeader = NormalizeHeader(header);
-
-            // Rows
+            // Skip header
             for (int i = 1; i < lines.Length; i++)
             {
-                var line = lines[i]?.Trim();
-                if (string.IsNullOrEmpty(line)) continue;
+                if (string.IsNullOrWhiteSpace(lines[i]))
+                    continue;
 
-                var values = SplitCsv(line).ToArray();
-                var data = CreateFromRow<CharacterData>(normHeader, values);
-                if (data != null) Characters.Add(data);
-            }
-
-            Debug.Log($"CharacterDatabase now contains {Characters.Count} entries.");
-        }
-
-        // ---------- Generic helpers ----------
-
-        private static CharacterData CreateFromRow<T>(string[] normHeader, string[] values) where T : ScriptableObject
-        {
-            try
-            {
-                var type = typeof(T);
-                var so = ScriptableObject.CreateInstance(type);
-
-                for (int i = 0; i < normHeader.Length && i < values.Length; i++)
+                var cols = CSVUtility.SplitCsvLine(lines[i]).ToArray();
+                var data = new CharacterData
                 {
-                    var key = normHeader[i];          // normalized header token
-                    var raw = values[i];
+                    Name = cols.Length > 0 ? cols[0] : string.Empty,
+                    Type = cols.Length > 1 ? cols[1] : string.Empty,
+                    Role = cols.Length > 2 ? cols[2] : string.Empty,
+                    Affiliation = cols.Length > 3 ? cols[3] : string.Empty,
+                    Class = cols.Length > 4 ? cols[4] : string.Empty,
+                    Faction = cols.Length > 5 ? cols[5] : string.Empty,
+                    Element = cols.Length > 6 ? cols[6] : string.Empty,
+                    Gender = cols.Length > 7 ? cols[7] : string.Empty,
+                    Health = cols.Length > 8 ? int.Parse(cols[8]) : 0,
+                    Mana = cols.Length > 9 ? int.Parse(cols[9]) : 0,
+                    Attack = cols.Length > 10 ? int.Parse(cols[10]) : 0,
+                    Defense = cols.Length > 11 ? int.Parse(cols[11]) : 0,
+                    Magic = cols.Length > 12 ? int.Parse(cols[12]) : 0,
+                    Speed = cols.Length > 13 ? int.Parse(cols[13]) : 0,
+                    UltimateAbility = cols.Length > 14 ? cols[14] : string.Empty,
+                    LoreBackground = cols.Length > 15 ? cols[15] : string.Empty,
+                    ModelPath = cols.Length > 16 ? cols[16] : string.Empty
+                };
 
-                    // Try fields first
-                    var field = FindField(type, key);
-                    if (field != null)
-                    {
-                        object v = ConvertTo(field.FieldType, raw);
-                        field.SetValue(so, v);
-                        continue;
-                    }
-
-                    // Then properties with setter
-                    var prop = FindProperty(type, key);
-                    if (prop != null)
-                    {
-                        object v = ConvertTo(prop.PropertyType, raw);
-                        prop.SetValue(so, v, null);
-                    }
-                }
-
-                return (CharacterData)so;
+                characters.Add(data);
             }
-            catch (Exception ex)
+
+            Debug.Log($"[CharacterDatabase] Loaded {characters.Count} characters from {path}");
+            return characters;
+        }
+
+        /// <summary>
+        /// Saves a list of characters to a CSV file.
+        /// </summary>
+        public static void SaveCharacters(List<CharacterData> characters, string path)
+        {
+            var rows = new List<string>();
+
+            // Header row
+            rows.Add("Name,Type,Role,Affiliation,Class,Faction,Element,Gender,Health,Mana,Attack,Defense,Magic,Speed,UltimateAbility,LoreBackground,ModelPath");
+
+            foreach (var c in characters)
             {
-                Debug.LogWarning($"CharacterDatabase row parse failed: {ex.Message}");
-                return null;
+                rows.Add(ToCsvRow(c));
             }
+
+            File.WriteAllLines(path, rows);
+            Debug.Log($"[CharacterDatabase] Saved {characters.Count} characters to {path}");
         }
 
-        private static FieldInfo FindField(Type t, string normalizedName)
+        /// <summary>
+        /// Converts a character to a CSV row string.
+        /// </summary>
+        private static string ToCsvRow(CharacterData c)
         {
-            foreach (var f in t.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+            return string.Join(",", new string[]
             {
-                if (NormalizeToken(f.Name) == normalizedName) return f;
-            }
-            return null;
-        }
-
-        private static PropertyInfo FindProperty(Type t, string normalizedName)
-        {
-            foreach (var p in t.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
-            {
-                if (!p.CanWrite) continue;
-                if (NormalizeToken(p.Name) == normalizedName) return p;
-            }
-            return null;
-        }
-
-        private static object ConvertTo(Type targetType, string raw)
-        {
-            try
-            {
-                if (targetType == typeof(string)) return raw ?? "";
-                if (targetType == typeof(int)) return int.TryParse(raw, out var i) ? i : 0;
-                if (targetType == typeof(float)) return float.TryParse(raw, out var f) ? f : 0f;
-                if (targetType == typeof(double)) return double.TryParse(raw, out var d) ? d : 0d;
-                if (targetType == typeof(bool))
-                {
-                    if (bool.TryParse(raw, out var b)) return b;
-                    if (int.TryParse(raw, out var bi)) return bi != 0;
-                    return string.Equals(raw, "true", StringComparison.OrdinalIgnoreCase);
-                }
-                return raw;
-            }
-            catch { return targetType.IsValueType ? Activator.CreateInstance(targetType) : null; }
-        }
-
-        private static string[] NormalizeHeader(string[] header)
-        {
-            var arr = new string[header.Length];
-            for (int i = 0; i < header.Length; i++) arr[i] = NormalizeToken(header[i]);
-            return arr;
-        }
-
-        private static string NormalizeToken(string s)
-        {
-            return string.IsNullOrEmpty(s) ? "" : s.Replace(" ", "").Replace("_", "").ToLowerInvariant();
-        }
-
-        /// <summary>CSV split supporting quotes and commas inside quotes.</summary>
-        private static List<string> SplitCsv(string line)
-        {
-            var result = new List<string>();
-            if (line == null) { result.Add(""); return result; }
-
-            bool inQuotes = false;
-            var cur = new System.Text.StringBuilder();
-
-            for (int i = 0; i < line.Length; i++)
-            {
-                char c = line[i];
-
-                if (c == '\"')
-                {
-                    if (inQuotes && i + 1 < line.Length && line[i + 1] == '\"')
-                    {
-                        // Escaped quote
-                        cur.Append('\"');
-                        i++;
-                    }
-                    else
-                    {
-                        inQuotes = !inQuotes;
-                    }
-                }
-                else if (c == ',' && !inQuotes)
-                {
-                    result.Add(cur.ToString());
-                    cur.Length = 0;
-                }
-                else
-                {
-                    cur.Append(c);
-                }
-            }
-
-            result.Add(cur.ToString());
-            return result;
+                c.Name,
+                c.Type,
+                c.Role,
+                c.Affiliation,
+                c.Class,
+                c.Faction,
+                c.Element,
+                c.Gender,
+                c.Health.ToString(),
+                c.Mana.ToString(),
+                c.Attack.ToString(),
+                c.Defense.ToString(),
+                c.Magic.ToString(),
+                c.Speed.ToString(),
+                c.UltimateAbility,
+                CSVUtility.EscapeCsvField(c.LoreBackground),
+                c.ModelPath
+            });
         }
     }
 }

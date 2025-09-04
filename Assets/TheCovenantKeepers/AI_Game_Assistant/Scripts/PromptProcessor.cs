@@ -57,7 +57,7 @@ namespace TheCovenantKeepers.AI_Game_Assistant
 #if UNITY_EDITOR
             AssetDatabase.ImportAsset(savePath);
 #endif
-            CharacterDatabase.LoadCharacterMasterlist(savePath);
+            CharacterDatabase.LoadCharacters(savePath);
             Debug.Log($"✅ Character masterlist saved to: {savePath}");
         }
 
@@ -80,7 +80,7 @@ namespace TheCovenantKeepers.AI_Game_Assistant
 #if UNITY_EDITOR
             AssetDatabase.ImportAsset(savePath);
 #endif
-            ItemDatabase.LoadItemMasterlist(savePath);
+            ItemDatabase.LoadItems(savePath);
             Debug.Log($"✅ Item masterlist saved to: {savePath}");
         }
 
@@ -103,7 +103,7 @@ namespace TheCovenantKeepers.AI_Game_Assistant
 #if UNITY_EDITOR
             AssetDatabase.ImportAsset(savePath);
 #endif
-            AbilityDatabase.LoadAbilityMasterlist(savePath);
+            AbilityDatabase.LoadAbilities(savePath);
             Debug.Log($"✅ Ability masterlist saved to: {savePath}");
         }
 
@@ -125,7 +125,7 @@ namespace TheCovenantKeepers.AI_Game_Assistant
 #if UNITY_EDITOR
             AssetDatabase.ImportAsset(savePath);
 #endif
-            QuestDatabase.LoadQuestMasterlist(savePath);
+            QuestDatabase.LoadQuests(savePath);
             Debug.Log($"✅ Quest masterlist saved to: {savePath}");
         }
 
@@ -147,7 +147,7 @@ namespace TheCovenantKeepers.AI_Game_Assistant
 #if UNITY_EDITOR
             AssetDatabase.ImportAsset(savePath);
 #endif
-            LocationDatabase.LoadLocationMasterlist(savePath);
+            LocationDatabase.LoadLocations(savePath);
             Debug.Log($"✅ Location masterlist saved to: {savePath}");
         }
 
