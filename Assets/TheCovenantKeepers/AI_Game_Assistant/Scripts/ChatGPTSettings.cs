@@ -17,60 +17,89 @@ public class ChatGPTSettings : ScriptableObject
 
     [Header("Project File Paths")]
     [Tooltip("The folder where your Character, Item, and Ability CSV files are located.")]
-    public string MasterDataPath = "Assets/AI_RPG_Assistant/Data/";
+    public string MasterDataPath = AssistantPaths.DataRoot;
 
     [Tooltip("The folder where the tool will save generated ScriptableObjects.")]
-    public string ScriptableObjectPath = "Assets/AI_RPG_Assistant/Data/ScriptableObjects/";
+    public string ScriptableObjectPath = AssistantPaths.PackageRoot + "/Data/ScriptableObjects/";
 
     [Tooltip("The folder where the tool will search for character models.")]
-    public string ModelSearchPath = "Assets/AI_RPG_Assistant/Art/Models/Characters/";
+    public string ModelSearchPath = AssistantPaths.PackageRoot + "/Art/Models/Characters/";
 
     [Tooltip("The folder where the tool will save generated Animator Controllers.")]
-    public string AnimatorControllerPath = "Assets/AI_RPG_Assistant/AnimatorControllers/";
+    public string AnimatorControllerPath = AssistantPaths.PackageRoot + "/AnimatorControllers/";
 
     [Tooltip("The folder where the final character prefabs will be saved.")]
-    public string PrefabSavePath = "Assets/AI_RPG_Assistant/Prefabs/";
+    public string PrefabSavePath = AssistantPaths.PackageRoot + "/Prefabs/";
 
     [Tooltip("The folder where generated C# scripts will be saved.")]
-    public string ScriptGenerationPath = "Assets/AI_RPG_Assistant/Scripts/Generated/";
+    public string ScriptGenerationPath = AssistantPaths.GeneratedScripts + "/";
 
     [Tooltip("The folder containing your high-quality blueprint scripts.")]
-    public string BlueprintScriptsPath = "Assets/AI_RPG_Assistant/Scripts/Blueprints/";
-
-    //[Tooltip("The folder path to your main animation pack (e.g., from the Asset Store).")]
-    //public string AnimationPackPath = "Assets/AI_RPG_Assistant/Art/Animations/";
+    public string BlueprintScriptsPath = AssistantPaths.ScriptsRoot + "/Blueprints/";
 
     [Tooltip("Path to the CSV file that maps animator state names to animation clip search keywords.")]
-    public string AnimationMapPath = "Assets/AI_RPG_Assistant/Data/AnimationMap.csv";
+    public string AnimationMapPath = AssistantPaths.DataRoot + "/AnimationMap.csv";
 
     private static ChatGPTSettings _instance;
     public static ChatGPTSettings Get()
     {
         if (_instance != null) return _instance;
 
+        // Try to find any existing settings asset
         string[] guids = AssetDatabase.FindAssets("t:ChatGPTSettings");
         if (guids.Length > 0)
         {
             string path = AssetDatabase.GUIDToAssetPath(guids[0]);
             _instance = AssetDatabase.LoadAssetAtPath<ChatGPTSettings>(path);
+
+            // Migrate legacy location if necessary
+            if (path.StartsWith("Assets/AI_RPG_Assistant"))
+            {
+                string targetFolder = AssistantPaths.EditorRoot;
+                AssistantPaths.EnsureFolder(targetFolder);
+                string newPath = (targetFolder + "/ChatGPTSettings.asset").Replace('\\','/');
+                string err = AssetDatabase.MoveAsset(path, newPath);
+                if (!string.IsNullOrEmpty(err))
+                {
+                    // Fallback copy
+                    try
+                    {
+                        var sysSrc = ToSystemPath(path);
+                        var sysDst = ToSystemPath(newPath);
+                        Directory.CreateDirectory(Path.GetDirectoryName(sysDst));
+                        File.Copy(sysSrc, sysDst, true);
+                        AssetDatabase.ImportAsset(newPath);
+                        AssetDatabase.DeleteAsset(path);
+                    }
+                    catch (System.Exception ex)
+                    {
+                        Debug.LogWarning($"Failed to migrate ChatGPTSettings asset: {ex.Message}");
+                    }
+                }
+                _instance = AssetDatabase.LoadAssetAtPath<ChatGPTSettings>(newPath);
+            }
         }
 
+        // Create a new one if still missing
         if (_instance == null)
         {
-            Debug.LogWarning("ChatGPTSettings asset not found. Creating a new one in Assets/AI_RPG_Assistant/Editor/");
+            string targetFolder = AssistantPaths.EditorRoot;
+            Debug.LogWarning($"ChatGPTSettings asset not found. Creating a new one in {targetFolder}");
             _instance = CreateInstance<ChatGPTSettings>();
-
-            string path = "Assets/AI_RPG_Assistant/Editor/";
-            if (!Directory.Exists(path))
-            {
-                Directory.CreateDirectory(path);
-            }
-
-            AssetDatabase.CreateAsset(_instance, path + "ChatGPTSettings.asset");
+            AssistantPaths.EnsureFolder(targetFolder);
+            string assetPath = (targetFolder + "/ChatGPTSettings.asset").Replace('\\','/');
+            AssetDatabase.CreateAsset(_instance, assetPath);
             AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
         }
         return _instance;
     }
 
+    private static string ToSystemPath(string assetPath)
+    {
+        var projectAssets = Application.dataPath.Replace("\\", "/");
+        if (!assetPath.StartsWith("Assets/")) return assetPath.Replace("\\", "/");
+        return projectAssets.Substring(0, projectAssets.Length - "Assets".Length) + assetPath;
+    }
   }
 }

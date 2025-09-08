@@ -1,0 +1,22 @@
+{
+  "name": "TheCovenantKeepers.AI_Game_Assistant.Runtime",
+  "rootNamespace": "TheCovenantKeepers.AI_Game_Assistant",
+  "references": [
+    "Unity.InputSystem"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [
+    {
+      "name": "com.unity.inputsystem",
+      "expression": "1.0.0",
+      "define": "HAS_INPUT_SYSTEM"
+    }
+  ],
+  "noEngineReferences": false
+}
