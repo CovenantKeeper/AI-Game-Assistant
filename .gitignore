@@ -31,3 +31,5 @@ Assets/AssetStoreTools*
 *.apk
 *.aab
 *.unitypackage
+Assets/TheCovenantKeepers/AI_Game_Assistant/Editor/ChatGPTSettings.asset
+Assets/TheCovenantKeepers/AI_Game_Assistant/Editor/ChatGPTSettings.asset.meta

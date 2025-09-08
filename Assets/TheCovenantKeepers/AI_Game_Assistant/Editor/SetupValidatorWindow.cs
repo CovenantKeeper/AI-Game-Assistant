@@ -6,15 +6,14 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor
 {
     public class SetupValidatorWindow : EditorWindow
     {
-        // Main entry in The Covenant Keepers menu (normalized)
-        [MenuItem("The Covenant Keepers/AI Game Assistant/Setup Validator")]
+        // Unified under the same menu hierarchy
+        [MenuItem("The Covenant Keepers/AI Game Assistant/Diagnostics/Setup Validator")]
         public static void ShowWindow()
         {
             GetWindow<SetupValidatorWindow>("Setup Validator");
         }
 
-        // Optional quick action (also under The Covenant Keepers)
-        [MenuItem("The Covenant Keepers/AI Game Assistant/Run Setup Validation")]
+        [MenuItem("The Covenant Keepers/AI Game Assistant/Diagnostics/Run Setup Validation")]
         public static void RunValidationMenu()
         {
             RunValidation();
@@ -22,9 +21,7 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor
 
         private static void RunValidation()
         {
-            // Keep this lightweight/compile-safe
             Debug.Log("[Setup Validator] Basic check ran (customize as needed).\n");
-            // Add any simple checks here (e.g. confirm key assets exist).
         }
 
         private void OnGUI()

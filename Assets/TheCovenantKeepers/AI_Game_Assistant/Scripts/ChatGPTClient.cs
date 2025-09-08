@@ -20,6 +20,19 @@ public static class ChatGPTClient
     [System.Serializable]
     public class ChatResponse { public List<ChatChoice> choices = new List<ChatChoice>(); }
 
+    private static string BuildSystemMessage(string userPrompt)
+    {
+        // Heuristic: if the prompt looks like a CSV/data request, use a data-focused system message
+        var up = (userPrompt ?? string.Empty).ToLowerInvariant();
+        bool wantsCsv = up.Contains("csv") || up.Contains("columns (exact order)") || up.Contains("rows only") || up.Contains("raw csv");
+        if (wantsCsv)
+        {
+            return "You are a disciplined data generator. When asked for CSV, output only raw CSV rows with comma-separated values matching the user's column order. Do not include headers unless explicitly included by the user. Do not include code, variable assignments, comments, or markdown. Quote fields that contain commas. Return rows only.";
+        }
+        // Default to C# script behavior for scripting prompts
+        return "You are an assistant that generates complete, concise, and correct Unity C# MonoBehaviour scripts. Provide only the raw C# code. Do not include any surrounding text, explanations, or markdown formatting like ```csharp or ```. Ensure the class name is suitable for a Unity script, ideally derived from the user's prompt if not specified. Include necessary 'using' directives (like 'using UnityEngine;').";
+    }
+
     public static async Task<string> GenerateScriptAsync(string userPrompt, string apiKey, string apiUrl, string model)
     {
         if (string.IsNullOrEmpty(apiKey))
@@ -39,8 +52,8 @@ public static class ChatGPTClient
             model = model,
             messages = new List<ChatMessage>
             {
-                // System message to guide the AI's response format
-                new ChatMessage { role = "system", content = "You are an assistant that generates complete, concise, and correct Unity C# MonoBehaviour scripts. Provide only the raw C# code. Do not include any surrounding text, explanations, or markdown formatting like ```csharp or ```. Ensure the class name is suitable for a Unity script, ideally derived from the user's prompt if not specified. Include necessary 'using' directives (like 'using UnityEngine;')." },
+                // Dynamic system message based on requested format
+                new ChatMessage { role = "system", content = BuildSystemMessage(userPrompt) },
                 new ChatMessage { role = "user", content = userPrompt }
             }
         };

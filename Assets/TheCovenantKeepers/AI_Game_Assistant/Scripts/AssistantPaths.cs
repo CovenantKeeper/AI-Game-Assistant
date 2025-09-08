@@ -25,28 +25,34 @@ namespace TheCovenantKeepers.AI_Game_Assistant
         public const string AssistantUxml = "Assets/TheCovenantKeepers/AI_Game_Assistant/Editor/UI/AssistantWindow.uxml";
         public const string AssistantUss = "Assets/TheCovenantKeepers/AI_Game_Assistant/Editor/UI/AssistantWindow.uss";
 
-        // Generated CSV targets
-        public const string GeneratedCharacterCsv = DataRoot + "/Generated_CharacterMasterlist.csv";
-        public const string GeneratedItemCsv = DataRoot + "/Generated_ItemMasterlist.csv";
-        public const string GeneratedAbilityCsv = DataRoot + "/Generated_AbilityMasterlist.csv";
-        public const string GeneratedQuestCsv = DataRoot + "/Generated_QuestMasterlist.csv";
-        public const string GeneratedLocationCsv = DataRoot + "/Generated_LocationMasterlist.csv";
+        // Type-specific folders (normalize to forward slashes on Windows)
+        public static string CharactersPath => Path.Combine(DataRoot, "Characters").Replace('\\','/');
+        public static string ItemsPath => Path.Combine(DataRoot, "Items").Replace('\\','/');
+        public static string AbilitiesPath => Path.Combine(DataRoot, "Abilities").Replace('\\','/');
+        public static string QuestsPath => Path.Combine(DataRoot, "Quests").Replace('\\','/');
+        public static string LocationsPath => Path.Combine(DataRoot, "Locations").Replace('\\','/');
+        public static string BeastsPath => Path.Combine(DataRoot, "Beasts").Replace('\\','/');
+        public static string SpiritsPath => Path.Combine(DataRoot, "Spirits").Replace('\\','/');
+
+        // Generated CSV targets (now inside subfolders)
+        public static string GeneratedCharacterCsv => Path.Combine(CharactersPath, "Generated_CharacterMasterlist.csv").Replace('\\','/');
+        public static string GeneratedItemCsv      => Path.Combine(ItemsPath,      "Generated_ItemMasterlist.csv").Replace('\\','/');
+        public static string GeneratedAbilityCsv   => Path.Combine(AbilitiesPath,  "Generated_AbilityMasterlist.csv").Replace('\\','/');
+        public static string GeneratedQuestCsv     => Path.Combine(QuestsPath,     "Generated_QuestMasterlist.csv").Replace('\\','/');
+        public static string GeneratedLocationCsv  => Path.Combine(LocationsPath,  "Generated_LocationMasterlist.csv").Replace('\\','/');
+        public static string GeneratedBeastCsv     => Path.Combine(BeastsPath,     "Generated_BeastMasterlist.csv").Replace('\\','/');
+        public static string GeneratedSpiritCsv    => Path.Combine(SpiritsPath,    "Generated_SpiritMasterlist.csv").Replace('\\','/');
 
         // Namespace used throughout the assistant
         public const string DefaultNamespace = "TheCovenantKeepers.AI_Game_Assistant";
-
-        // --- ADDED: Specific paths for each masterlist type ---
-        public static string CharactersPath => Path.Combine(DataRoot, "Characters");
-        public static string ItemsPath => Path.Combine(DataRoot, "Items");
-        public static string AbilitiesPath => Path.Combine(DataRoot, "Abilities");
-        public static string QuestsPath => Path.Combine(DataRoot, "Quests");
-        public static string LocationsPath => Path.Combine(DataRoot, "Locations");
 
 #if UNITY_EDITOR
         // -------- Folder utilities --------
         public static void EnsureFolder(string assetPath)
         {
             if (string.IsNullOrEmpty(assetPath)) return;
+            // Normalize to forward slashes to avoid Unity creating folders with underscores
+            assetPath = assetPath.Replace('\\','/');
             if (!assetPath.StartsWith("Assets/")) return;
 
             var parts = assetPath.Split('/');
@@ -82,6 +88,14 @@ namespace TheCovenantKeepers.AI_Game_Assistant
             EnsureFolder(DataRoot);
             EnsureFolder(ScriptsRoot);
             EnsureFolder(GeneratedScripts);
+            // Ensure the type subfolders exist
+            EnsureFolder(CharactersPath);
+            EnsureFolder(ItemsPath);
+            EnsureFolder(AbilitiesPath);
+            EnsureFolder(QuestsPath);
+            EnsureFolder(LocationsPath);
+            EnsureFolder(BeastsPath);
+            EnsureFolder(SpiritsPath);
         }
 
         // -------- Legacy migration --------

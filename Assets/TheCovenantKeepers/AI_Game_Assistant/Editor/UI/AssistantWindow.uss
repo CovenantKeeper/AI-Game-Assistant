@@ -5,13 +5,21 @@
 
 #left-pane {
     flex-direction: column;
-    width: 380px;
-    min-width: 320px;
-    max-width: 500px;
+    min-width: 300px;
+}
+
+#right-pane {
+    flex-direction: column;
 }
 
 #masterlist-listview {
     flex-grow: 1;
+}
+
+/* Split view drag line helpers */
+#main-split > #unity-dragline,
+#right-split > #unity-dragline {
+    background-color: rgba(120,120,120,0.25);
 }
 
 /* --- Headers and Groups --- */
@@ -31,10 +39,6 @@
     margin-bottom: 10px;
 }
 
-.details-panel {
-    display: none; /* Panels are hidden by default */
-}
-
 /* --- Text Fields --- */
 #ai-prompt-field .unity-base-text-field__input {
     min-height: 80px;
@@ -43,3 +47,12 @@
 .unity-text-field--multiline .unity-base-text-field__input {
     min-height: 60px;
 }
+
+.section-header {
+    font-size: 16px;
+    -unity-font-style: bold;
+    margin-bottom: 6px;
+}
+
+#top-scroll { min-height: 200px; }
+#bottom-scroll { min-height: 120px; }

@@ -15,7 +15,8 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Diagnostics
             "Editor", "Scripts", "Data", "Settings", "UI", "Editor/UI"
         };
 
-        [MenuItem("TheCovenantKeepers/AI Assistant/Migrate Project To Studio Root")]
+        // Unified under a single top-level menu name
+        [MenuItem("The Covenant Keepers/AI Game Assistant/Diagnostics/Migrate Project To Studio Root")]
         public static void Migrate()
         {
             try

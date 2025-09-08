@@ -1,0 +1,18 @@
+{
+  "name": "TheCovenantKeepers.AI_Game_Assistant.Editor",
+  "rootNamespace": "TheCovenantKeepers.AI_Game_Assistant.Editor",
+  "references": [
+    "TheCovenantKeepers.AI_Game_Assistant.Runtime"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}
