@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 442704dd20541de4ab923194ef53dcb5, type: 3}
+  m_Name: GabrielAbilityEffect
+  m_EditorClassIdentifier: TheCovenantKeepers.AI_Game_Assistant.Runtime::TheCovenantKeepers.AI_Game_Assistant.AbilityEffect
+  castVfx: {fileID: 4788751864552499129, guid: fed77e3586f4bd74599c3e3842e787eb, type: 3}
+  castSfx: {fileID: 8300000, guid: b6fc63abd94d74b2b880f9dd5cd52b5a, type: 3}
+  hitVfx: {fileID: 1690548281334034, guid: 60ff48a39b3e7b644aa620b288bb256e, type: 3}
+  hitSfx: {fileID: 8300000, guid: 5f1d1d3d6071e4b6cbde7a4e973700f8, type: 3}
+  positionOffset: {x: 0, y: 0, z: 0.1}
+  rotationOffsetEuler: {x: 0, y: 0, z: 0}
+  parentToSpawn: 0
+  spawnSpace: 1
+  sfxVolume: 1

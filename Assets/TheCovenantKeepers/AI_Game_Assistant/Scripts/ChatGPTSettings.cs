@@ -40,6 +40,10 @@ public class ChatGPTSettings : ScriptableObject
     [Tooltip("Path to the CSV file that maps animator state names to animation clip search keywords.")]
     public string AnimationMapPath = AssistantPaths.DataRoot + "/AnimationMap.csv";
 
+    [Header("Animation Search")] 
+    [Tooltip("Additional folders to search for AnimationClips when auto-building controllers. e.g. Assets/ExplosiveLLC")] 
+    public string[] AdditionalAnimationSearchFolders = new[] { "Assets/ExplosiveLLC" };
+
     private static ChatGPTSettings _instance;
     public static ChatGPTSettings Get()
     {
@@ -92,7 +96,80 @@ public class ChatGPTSettings : ScriptableObject
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
         }
+
+        // Ensure paths are using Game Assistant root instead of legacy AI_RPG_Assistant
+        MigrateInternalPathsIfNeeded(_instance);
         return _instance;
+    }
+
+    private static void MigrateInternalPathsIfNeeded(ChatGPTSettings s)
+    {
+        bool changed = false;
+        string legacyRoot = "Assets/AI_RPG_Assistant";
+        string ReplaceLegacy(string input, string fallback)
+        {
+            if (string.IsNullOrEmpty(input)) { changed = true; return fallback; }
+            if (input.StartsWith(legacyRoot)) { changed = true; return input.Replace(legacyRoot, AssistantPaths.PackageRoot); }
+            return input;
+        }
+
+        s.MasterDataPath = ReplaceLegacy(s.MasterDataPath, AssistantPaths.DataRoot);
+        s.ScriptableObjectPath = ReplaceLegacy(s.ScriptableObjectPath, AssistantPaths.PackageRoot + "/Data/ScriptableObjects/");
+        s.ModelSearchPath = ReplaceLegacy(s.ModelSearchPath, AssistantPaths.PackageRoot + "/Art/Models/Characters/");
+        s.AnimatorControllerPath = ReplaceLegacy(s.AnimatorControllerPath, AssistantPaths.PackageRoot + "/AnimatorControllers/");
+        s.PrefabSavePath = ReplaceLegacy(s.PrefabSavePath, AssistantPaths.PackageRoot + "/Prefabs/");
+        s.ScriptGenerationPath = ReplaceLegacy(s.ScriptGenerationPath, AssistantPaths.GeneratedScripts + "/");
+        s.BlueprintScriptsPath = ReplaceLegacy(s.BlueprintScriptsPath, AssistantPaths.ScriptsRoot + "/Blueprints/");
+        s.AnimationMapPath = ReplaceLegacy(s.AnimationMapPath, AssistantPaths.DataRoot + "/AnimationMap.csv");
+
+        // Ensure animation search includes known pack folders mentioned by the user
+        string[] desiredDefaults = new[]
+        {
+            "Assets/ExplosiveLLC",
+            "Assets/ExplosiveLLC/RPG Character Mecanim Animation Pack/Animations",
+            "Assets/PolygonFantasyHeroCharacters",
+            "Assets/GabrielAguiarProductions",
+            "Assets/Hovl Studio"
+        };
+
+        System.Collections.Generic.List<string> merged = new System.Collections.Generic.List<string>();
+        if (s.AdditionalAnimationSearchFolders != null && s.AdditionalAnimationSearchFolders.Length > 0)
+            merged.AddRange(s.AdditionalAnimationSearchFolders);
+
+        foreach (var f in desiredDefaults)
+        {
+            var path = (f ?? string.Empty).Replace('\\','/');
+            if (string.IsNullOrEmpty(path)) continue;
+            if (!merged.Contains(path) && AssetDatabase.IsValidFolder(path))
+            {
+                merged.Add(path);
+                changed = true;
+            }
+        }
+
+        if (merged.Count == 0)
+        {
+            // fallback at least one default to avoid null
+            merged.Add("Assets/ExplosiveLLC");
+            changed = true;
+        }
+
+        if (s.AdditionalAnimationSearchFolders == null || merged.Count != s.AdditionalAnimationSearchFolders.Length)
+            s.AdditionalAnimationSearchFolders = merged.ToArray();
+
+        if (changed)
+        {
+            // Make sure folders exist so future saves go to the right place
+            AssistantPaths.EnsureFolder(AssistantPaths.DataRoot);
+            AssistantPaths.EnsureFolder(AssistantPaths.PackageRoot + "/Data/ScriptableObjects/");
+            AssistantPaths.EnsureFolder(AssistantPaths.PackageRoot + "/AnimatorControllers/");
+            AssistantPaths.EnsureFolder(AssistantPaths.PackageRoot + "/Prefabs/");
+            AssistantPaths.EnsureFolder(AssistantPaths.GeneratedScripts + "/");
+            AssistantPaths.EnsureFolder(AssistantPaths.ScriptsRoot + "/Blueprints/");
+
+            EditorUtility.SetDirty(s);
+            AssetDatabase.SaveAssets();
+        }
     }
 
     private static string ToSystemPath(string assetPath)

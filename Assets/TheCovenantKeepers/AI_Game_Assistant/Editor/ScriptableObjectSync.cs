@@ -23,10 +23,10 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor
         private const string ChatGPTSettingsTypeName = "TheCovenantKeepers.AI_Game_Assistant.ChatGPTSettings";
         private const string AssistantPathsTypeName = "TheCovenantKeepers.AI_Game_Assistant.AssistantPaths";
 
-        [MenuItem("The Covenant Keepers/AI Game Assistant/Data/Sync Character ScriptableObjects", priority = 50)]
+        [MenuItem(TheCovenantKeepers.AI_Game_Assistant.Editor.TckMenu.Data + "/Sync Character ScriptableObjects", priority = 50)]
         public static void MenuSyncCharacters()
         {
-            if (!TryGetStaticStringField(AssistantPathsTypeName, "GeneratedCharacterCsv", out string csv))
+            if (!TryGetStaticStringMember(AssistantPathsTypeName, "GeneratedCharacterCsv", out string csv))
             {
                 EditorUtility.DisplayDialog("Sync Aborted", "AssistantPaths not available yet (recompile needed).", "OK");
                 return;
@@ -45,7 +45,7 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor
 
         private static IList LoadCharacters(string path)
         {
-            var dbType = Type.GetType(CharacterDbTypeName);
+            var dbType = FindType(CharacterDbTypeName);
             if (dbType == null) return null;
             var m = dbType.GetMethod("LoadCharacters", BindingFlags.Public | BindingFlags.Static);
             if (m == null) return null;
@@ -56,7 +56,7 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor
         {
             var diff = new DiffResult { added = new List<string>(), updated = new List<string>(), unchanged = new List<string>(), removed = new List<string>() };
 
-            var charType = Type.GetType(CharacterTypeName);
+            var charType = FindType(CharacterTypeName);
             if (charType == null)
             {
                 Debug.LogError("CharacterData type not found.");
@@ -67,7 +67,7 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor
             if (string.IsNullOrEmpty(root))
             {
                 // fallback default
-                if (TryGetStaticStringField(AssistantPathsTypeName, "PackageRoot", out var pkgRoot))
+                if (TryGetStaticStringMember(AssistantPathsTypeName, "PackageRoot", out var pkgRoot))
                     root = pkgRoot + "/Data/ScriptableObjects/";
                 else root = "Assets/TheCovenantKeepers/AI_Game_Assistant/Data/ScriptableObjects/";
             }
@@ -127,7 +127,6 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor
 
         // --- Reflection helpers ---
         private static readonly string[] CompareFields = { "Health","Mana","Attack","Defense","Magic","Speed","Class","Faction","UltimateAbility","PassiveName","Ability1Name","Ability2Name","Ability3Name","LoreBackground" };
-        private static readonly string[] CopyFieldsListCache = null; // null => copy all public instance fields
 
         private static bool HasChanged(object a, object b, Type t)
         {
@@ -163,20 +162,57 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor
         private static void ShowDiffDialog(string label, DiffResult diff)
         { var msg = $"{label} SO Sync Complete\nAdded: {diff.added.Count}\nUpdated: {diff.updated.Count}\nUnchanged: {diff.unchanged.Count}\nPotentially Removed (not in CSV): {diff.removed.Count}"; Debug.Log(msg); if (diff.removed.Count > 0) msg += "\n\n(Removed list not deleted automatically)"; EditorUtility.DisplayDialog($"{label} Sync", msg, "OK"); }
 
-        private static bool TryGetStaticStringField(string typeName, string fieldName, out string value)
+        private static bool TryGetStaticStringMember(string typeName, string memberName, out string value)
         {
-            value = null; var t = Type.GetType(typeName); if (t == null) return false;
-            var f = t.GetField(fieldName, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
-            if (f == null) return false; var v = f.GetValue(null); if (v is string s) { value = s; return true; } return false;
+            value = null;
+            var t = FindType(typeName);
+            if (t == null) return false;
+
+            // First try field
+            var f = t.GetField(memberName, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
+            if (f != null)
+            {
+                var v = f.GetValue(null);
+                if (v is string s1) { value = s1; return true; }
+            }
+
+            // Then try property (e.g., AssistantPaths.GeneratedCharacterCsv)
+            var p = t.GetProperty(memberName, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
+            if (p != null && p.CanRead)
+            {
+                try
+                {
+                    var v = p.GetValue(null, null);
+                    if (v is string s2) { value = s2; return true; }
+                }
+                catch { }
+            }
+
+            return false;
         }
 
         private static string GetSettingsScriptableObjectPath()
         {
-            var t = Type.GetType(ChatGPTSettingsTypeName); if (t == null) return null;
+            var t = FindType(ChatGPTSettingsTypeName); if (t == null) return null;
             var getMethod = t.GetMethod("Get", BindingFlags.Public | BindingFlags.Static); if (getMethod == null) return null;
             var inst = getMethod.Invoke(null, null); if (inst == null) return null;
             var field = t.GetField("ScriptableObjectPath", BindingFlags.Public | BindingFlags.Instance);
             return field?.GetValue(inst) as string;
+        }
+
+        private static Type FindType(string fullName)
+        {
+            // Try direct first
+            var t = Type.GetType(fullName);
+            if (t != null) return t;
+            // Search all loaded assemblies to avoid needing assembly-qualified names
+            foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                try { t = asm.GetType(fullName); }
+                catch { t = null; }
+                if (t != null) return t;
+            }
+            return null;
         }
 
         private static void EnsureFolder(string folder)

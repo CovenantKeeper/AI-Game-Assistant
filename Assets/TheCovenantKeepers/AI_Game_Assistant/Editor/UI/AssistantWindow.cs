@@ -8,6 +8,7 @@ using System.Linq;
 using UnityEditor.UIElements;
 using System.Reflection;
 using UnityEditor.Animations;
+using UnityEditor.SceneManagement;
 
 namespace TheCovenantKeepers.AI_Game_Assistant.Editor.UI
 {
@@ -33,8 +34,7 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor.UI
         private const string PrefKeyProvider = "TCK_AI_Provider";
         private const string PrefKeyPrompt = "TCK_AI_LastPrompt";
 
-        [MenuItem("The Covenant Keepers/AI Game Assistant/Assistant Window", priority = 0)]
-        [MenuItem("Window/The Covenant Keepers/AI Game Assistant", priority = 2000)]
+        [MenuItem(TheCovenantKeepers.AI_Game_Assistant.Editor.TckMenu.Root + "/Assistant Window", priority = 0)]
         public static void ShowWindow() => GetWindow<AssistantWindow>("AI Game Assistant");
 
         private void CreateGUI()
@@ -48,6 +48,9 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor.UI
             var root = rootVisualElement;
 
             Button generateButton = null;
+
+            // We'll remember promptHost to anchor our sidebar Effects tools there
+            VisualElement promptHost = null;
 
             if (visualTree != null)
             {
@@ -64,7 +67,7 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor.UI
                 contentArea = root.Q<VisualElement>("content-area"); // may be null in new layout
 
                 // Build a single scrollable TextField in the host
-                var promptHost = root.Q<VisualElement>("ai-prompt-host");
+                promptHost = root.Q<VisualElement>("ai-prompt-host");
                 if (promptHost != null)
                 {
                     promptHost.Clear();
@@ -93,6 +96,39 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor.UI
                 // optional status label bottom area
                 statusLabel = new Label() { name = "status-label" };
                 (contentBottom ?? root).Add(statusLabel);
+
+                // NEW: Animator tools row (bottom utility row)
+                var animatorToolsRow = new VisualElement { name = "animator-tools-row" };
+                animatorToolsRow.style.flexDirection = FlexDirection.Row;
+                animatorToolsRow.style.marginTop = 4;
+                animatorToolsRow.style.flexWrap = Wrap.Wrap; // allow wrapping to avoid clipping
+
+                var createPresetBtn = new Button() { text = "Create RPG AnimatorPreset" };
+                createPresetBtn.tooltip = "Creates a default RPG AnimatorPreset (Idle/Walk/Run/Jump/Attacks/etc.).";
+                createPresetBtn.clicked += () =>
+                {
+                    // Call the template creator directly
+                    TheCovenantKeepers.AI_Game_Assistant.Editor.AnimatorPresetTemplates.CreateDefaultRpgPreset();
+                };
+                animatorToolsRow.Add(createPresetBtn);
+
+                (contentBottom ?? root).Add(animatorToolsRow);
+
+                // NEW: Effects tools sidebar group (visible in left column under CSV/Prompt)
+                var effectsGroup = BuildEffectsSidebarGroup();
+                bool placedInSidebar = false;
+                if (promptHost != null && promptHost.parent != null)
+                {
+                    // Add a titled box under the same parent as promptHost for visibility
+                    var leftColumn = promptHost.parent;
+                    leftColumn.Add(effectsGroup);
+                    placedInSidebar = true;
+                }
+                if (!placedInSidebar)
+                {
+                    // Fallback to bottom row if layout doesn't expose a sidebar
+                    (contentBottom ?? root).Add(effectsGroup);
+                }
             }
 
             // Fallbacks
@@ -141,6 +177,7 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor.UI
             var promptToolsRow = new VisualElement { name = "prompt-tools-row" };
             promptToolsRow.style.flexDirection = FlexDirection.Row;
             promptToolsRow.style.marginTop = 4;
+            promptToolsRow.style.flexWrap = Wrap.Wrap; // allow wrapping
 
             var useDefaultPromptBtn = new Button() { text = "Use Default Prompt" };
             useDefaultPromptBtn.clicked += () =>
@@ -218,6 +255,39 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor.UI
             };
 
             ShowSection(savedType);
+        }
+
+        // Builds a titled group with the Effects/Spawner tools
+        private VisualElement BuildEffectsSidebarGroup()
+        {
+            var box = new VisualElement { name = "effects-sidebar-group" };
+            box.style.marginTop = 6;
+            box.style.paddingTop = 6; box.style.paddingBottom = 6; box.style.paddingLeft = 6; box.style.paddingRight = 6;
+            box.style.borderTopWidth = 1; box.style.borderBottomWidth = 1; box.style.borderLeftWidth = 1; box.style.borderRightWidth = 1;
+            box.style.borderTopColor = new Color(0,0,0,0.3f); box.style.borderBottomColor = new Color(0,0,0,0.3f); box.style.borderLeftColor = new Color(0,0,0,0.3f); box.style.borderRightColor = new Color(0,0,0,0.3f);
+            var title = new Label("Effects Tools");
+            title.AddToClassList("section-header");
+            box.Add(title);
+
+            void AddButton(string text, System.Action onClick, string tooltip = null)
+            {
+                var btn = new Button(onClick) { text = text };
+                if (!string.IsNullOrEmpty(tooltip)) btn.tooltip = tooltip;
+                btn.style.marginTop = 2; btn.style.marginBottom = 2;
+                box.Add(btn);
+            }
+
+            AddButton("Create Effect SO", () => TheCovenantKeepers.AI_Game_Assistant.Editor.AbilityEffectTemplates.CreateEffectAsset(), "Create an AbilityEffect ScriptableObject.");
+            AddButton("Spark VFX Prefab", () => TheCovenantKeepers.AI_Game_Assistant.Editor.AbilityEffectTemplates.CreateSparkPrefab());
+            AddButton("Hit Puff VFX Prefab", () => TheCovenantKeepers.AI_Game_Assistant.Editor.AbilityEffectTemplates.CreateHitPuffPrefab());
+            AddButton("Effect + Sample Pair", () => TheCovenantKeepers.AI_Game_Assistant.Editor.AbilityEffectTemplates.CreateEffectWithVfxPair(), "Create a simple cast+hit VFX pair and an AbilityEffect that references them.");
+            AddButton("Add Spawner To Selected", AddAbilitySpawnerToSelection, "Adds an AbilityEffectSpawner to the selected GameObject and auto-assigns a spawn transform.");
+            AddButton("Open Effects Folder", () => { var fxFolder = "Assets/TheCovenantKeepers/AI_Game_Assistant/Blueprints/Effects"; AssistantPaths.EnsureFolder(fxFolder); EditorUtility.RevealInFinder(fxFolder); });
+
+            // New: Scene camera rig setup
+            AddButton("Setup Scene Camera Rig", () => TheCovenantKeepers.AI_Game_Assistant.Editor.CameraRigBuilder.SetupSceneCameraRig(), "Create/ensure Main Camera with TckFollowCamera that follows the Player.");
+
+            return box;
         }
 
         private static string GetSavePath(MasterlistType type)
@@ -326,11 +396,88 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor.UI
             }
 
             characters = CharacterDatabase.LoadCharacters(csvPath);
+            PopulateCharactersFromScriptableObjects(characters);
 
-            // Header toolbar
             var toolbar = new VisualElement { style = { flexDirection = FlexDirection.Row, alignItems = Align.Center, marginBottom = 6 } };
+            toolbar.style.flexWrap = Wrap.Wrap; // allow wrapping to keep buttons visible
             var openCsv = new Button(() => EditorUtility.RevealInFinder(csvPath)) { text = "Open CSV" };
             toolbar.Add(openCsv);
+
+            var createPresetBtnTop = new Button(() =>
+            {
+                TheCovenantKeepers.AI_Game_Assistant.Editor.AnimatorPresetTemplates.CreateDefaultRpgPreset();
+            }) { text = "Create RPG AnimatorPreset" };
+            createPresetBtnTop.tooltip = "Creates a default RPG AnimatorPreset (Idle/Walk/Run/Jump/Attacks/etc.).";
+            toolbar.Add(createPresetBtnTop);
+
+            // NEW: Batch create presets per unique Class from the loaded list
+            var createPresetsForClasses = new Button(() =>
+            {
+                if (characters == null || characters.Count == 0) { EditorUtility.DisplayDialog("Create Presets", "No entries loaded.", "OK"); return; }
+                var keys = characters
+                    .Select(c => c?.Class)
+                    .Where(s => !string.IsNullOrWhiteSpace(s))
+                    .Select(s => s.Trim())
+                    .Distinct(System.StringComparer.InvariantCultureIgnoreCase)
+                    .ToList();
+                int created = 0, skipped = 0;
+                foreach (var k in keys)
+                {
+                    var existing = FindAnimatorPresetForClassKey(k);
+                    if (existing != null) { skipped++; continue; }
+                    var path = TheCovenantKeepers.AI_Game_Assistant.Editor.AnimatorPresetTemplates.CreateRpgPresetForClassAuto(k);
+                    if (!string.IsNullOrEmpty(path)) created++;
+                }
+                EditorUtility.DisplayDialog("Create Presets", $"Classes: {keys.Count}\nCreated: {created}\nSkipped (already exist): {skipped}", "OK");
+            }) { text = "Create Presets For Classes" };
+            createPresetsForClasses.tooltip = "Creates one AnimatorPreset per unique Class in the loaded list (skips if already exists).";
+            toolbar.Add(createPresetsForClasses);
+
+            var createAndFillPresets = new Button(() =>
+            {
+                if (characters == null || characters.Count == 0) { EditorUtility.DisplayDialog("Create+Fill Presets", "No entries loaded.", "OK"); return; }
+                var keys = characters
+                    .Select(c => c?.Class)
+                    .Where(s => !string.IsNullOrWhiteSpace(s))
+                    .Select(s => s.Trim())
+                    .Distinct(System.StringComparer.InvariantCultureIgnoreCase)
+                    .ToList();
+                int processed = 0; int filled = 0;
+                var prevSel = Selection.objects;
+                try
+                {
+                    foreach (var k in keys)
+                    {
+                        // Ensure preset exists
+                        var preset = FindAnimatorPresetForClassKey(k);
+                        if (preset == null)
+                        {
+                            var path = TheCovenantKeepers.AI_Game_Assistant.Editor.AnimatorPresetTemplates.CreateRpgPresetForClassAuto(k);
+                            if (!string.IsNullOrEmpty(path)) preset = AssetDatabase.LoadAssetAtPath<ScriptableObject>(path);
+                        }
+                        if (preset == null) continue;
+
+                        // Find a sample CharacterData SO for this class
+                        var sampleChar = FindCharacterSOByClass(k);
+                        if (sampleChar == null)
+                        {
+                            processed++;
+                            continue; // can't auto-fill without hints; user can fill manually later
+                        }
+
+                        // Select preset + character so AutoFill can use both
+                        Selection.objects = new Object[] { preset, sampleChar };
+                        TheCovenantKeepers.AI_Game_Assistant.Editor.AnimatorPresetTemplates.AutoFillClipsInSelectedPreset();
+                        processed++; filled++;
+                    }
+                }
+                finally { Selection.objects = prevSel; }
+
+                EditorUtility.DisplayDialog("Create+Fill Presets", $"Classes: {keys.Count}\nProcessed: {processed}\nAuto-Filled: {filled}", "OK");
+            }) { text = "Create + Auto-Fill Presets (All)" };
+            createAndFillPresets.tooltip = "Creates missing presets per Class and tries to auto-fill them using a sample CharacterData of that Class.";
+            toolbar.Add(createAndFillPresets);
+
             var spacer = new VisualElement(); spacer.style.flexGrow = 1; toolbar.Add(spacer);
             var search = new ToolbarSearchField { value = searchText }; search.style.minWidth = 200;
             search.RegisterValueChangedCallback(evt => { searchText = evt.newValue ?? string.Empty; RepaintList(); });
@@ -339,7 +486,6 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor.UI
             var collapseAll = new Button() { text = "Collapse All" };
             toolbar.Add(expandAll); toolbar.Add(collapseAll);
 
-            // Bulk build button for filtered list
             var buildAllBtn = new Button() { text = "Build Prefabs (Filtered)" };
             buildAllBtn.clicked += () => BuildPrefabsForFiltered();
             toolbar.Add(buildAllBtn);
@@ -349,7 +495,6 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor.UI
             var listContainer = new VisualElement();
             (contentTop ?? contentArea).Add(listContainer);
 
-            // Build filtered list and foldouts in same order for mapping selections
             var filteredList = string.IsNullOrEmpty(searchText)
                 ? new List<CharacterData>(characters)
                 : characters.Where(c =>
@@ -378,7 +523,6 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor.UI
 
                     var factionField = new TextField("Faction") { value = character.Faction }; factionField.RegisterValueChangedCallback(evt => { character.Faction = evt.newValue; fold.text = string.IsNullOrEmpty(character.Name) ? "<unnamed>" : $"{character.Name} — {character.Class} / {character.Faction}"; }); inner.Add(factionField);
 
-                    // Model/Prefab selection
                     var modelObj = string.IsNullOrEmpty(character.ModelPath) ? null : AssetDatabase.LoadAssetAtPath<GameObject>(character.ModelPath);
                     var modelField = new ObjectField("Model / Prefab") { objectType = typeof(GameObject), allowSceneObjects = false, value = modelObj };
                     modelField.RegisterValueChangedCallback(e =>
@@ -388,7 +532,6 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor.UI
                     });
                     inner.Add(modelField);
 
-                    // Animator controller (optional per-character)
                     var animCtrlField = new ObjectField("Animator Controller") { objectType = typeof(RuntimeAnimatorController), allowSceneObjects = false, value = character.AnimatorController };
                     animCtrlField.RegisterValueChangedCallback(e =>
                     {
@@ -396,7 +539,6 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor.UI
                     });
                     inner.Add(animCtrlField);
 
-                    // Optional animation clip assignments
                     var clipFold = new Foldout { text = "Animation Clips" };
                     var idleField = new ObjectField("Idle") { objectType = typeof(AnimationClip), allowSceneObjects = false, value = character.IdleClip };
                     idleField.RegisterValueChangedCallback(e => character.IdleClip = e.newValue as AnimationClip);
@@ -419,6 +561,57 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor.UI
                     var ultClip = new ObjectField("Ultimate") { objectType = typeof(AnimationClip), allowSceneObjects = false, value = character.UltimateClip };
                     ultClip.RegisterValueChangedCallback(e => character.UltimateClip = e.newValue as AnimationClip);
                     clipFold.Add(ultClip);
+
+                    // Controller & Preset tools row
+                    var ctrlRow = new VisualElement { style = { flexDirection = FlexDirection.Row, marginTop = 4 } };
+                    var genCtrlBtn = new Button(() =>
+                    {
+                        var so = FindCharacterSOByName(character.Name);
+                        if (so == null)
+                        {
+                            EditorUtility.DisplayDialog("Generate Controller", "Create/Sync ScriptableObjects first (Data > Sync Character ScriptableObjects).", "OK");
+                            return;
+                        }
+                        var ctrlPath = TheCovenantKeepers.AI_Game_Assistant.Editor.CharacterPrefabBuilder.BuildAnimatorControllerForCharacter(so);
+                        if (!string.IsNullOrEmpty(ctrlPath))
+                        {
+                            var ctrl = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(ctrlPath);
+                            character.AnimatorController = ctrl;
+                            animCtrlField.value = ctrl;
+                            EditorUtility.RevealInFinder(ctrlPath);
+                            Debug.Log($"✅ AnimatorController generated: {ctrlPath}");
+                        }
+                        else
+                        {
+                            EditorUtility.DisplayDialog("Generate Controller", "Controller generation failed. Ensure clips/preset are set.", "OK");
+                        }
+                    }) { text = "Generate Controller" };
+                    ctrlRow.Add(genCtrlBtn);
+
+                    var autoFillBtn = new Button(() =>
+                    {
+                        var so = FindCharacterSOByName(character.Name);
+                        if (so == null)
+                        {
+                            EditorUtility.DisplayDialog("Auto-Fill Preset Clips", "Create/Sync Character ScriptableObjects first (Data > Sync Character ScriptableObjects).", "OK");
+                            return;
+                        }
+                        var prevSel = Selection.objects;
+                        try
+                        {
+                            Selection.objects = new Object[] { so };
+                            TheCovenantKeepers.AI_Game_Assistant.Editor.AnimatorPresetTemplates.AutoFillClipsInSelectedPreset();
+                        }
+                        finally
+                        {
+                            Selection.objects = prevSel;
+                        }
+                    }) { text = "Auto-Fill Preset Clips" };
+                    autoFillBtn.tooltip = "Auto-assign clips to the preset matching this character's Class.";
+                    ctrlRow.Add(autoFillBtn);
+
+                    inner.Add(ctrlRow);
+
                     inner.Add(clipFold);
 
                     var modelTools = new VisualElement { style = { flexDirection = FlexDirection.Row, marginBottom = 4 } };
@@ -439,12 +632,19 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor.UI
                     modelTools.Add(pingBtn); modelTools.Add(revealBtn); modelTools.Add(clearBtn);
                     inner.Add(modelTools);
 
-                    // Build Prefab actions row (per-character)
                     var buildRow = new VisualElement { style = { flexDirection = FlexDirection.Row, marginBottom = 4 } };
                     var buildBtn = new Button(() => BuildPrefabForCharacterName(character.Name, kind: "Player")) { text = "Build Prefab" };
                     buildRow.Add(buildBtn);
                     var buildEnemyBtn = new Button(() => BuildPrefabForCharacterName(character.Name, kind: "Enemy")) { text = "Build Enemy Prefab" };
                     buildRow.Add(buildEnemyBtn);
+                    var testBtn = new Button(() => TestAnimatorForCharacter(character.Name, kind: "Player")) { text = "Build & Test" };
+                    buildRow.Add(testBtn);
+
+                    // NEW: Create/Assign AbilityEffectSpawner on prefab (auto-spawn point)
+                    var spawnerBtn = new Button(() => CreateOrAssignSpawnerForCharacter(character.Name, kind: "Player")) { text = "Create/Assign Spawner" };
+                    spawnerBtn.tooltip = "Builds/updates the prefab then adds AbilityEffectSpawner on the root and assigns a VFX_Spawn transform (auto-guessed).";
+                    buildRow.Add(spawnerBtn);
+
                     inner.Add(buildRow);
 
                     // Extended identity
@@ -456,7 +656,6 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor.UI
                     var manaField = new IntegerField("Mana") { value = character.Mana }; manaField.style.minWidth = 150; manaField.RegisterValueChangedCallback(evt => character.Mana = evt.newValue); statsRow.Add(manaField);
                     inner.Add(statsRow);
 
-                    // Core combat rows
                     var row2 = new VisualElement { style = { flexDirection = FlexDirection.Row } };
                     var atkField = new IntegerField("Attack") { value = character.Attack }; atkField.style.minWidth = 120; atkField.RegisterValueChangedCallback(evt => character.Attack = evt.newValue); row2.Add(atkField);
                     var defField = new IntegerField("Defense") { value = character.Defense }; defField.style.minWidth = 120; defField.RegisterValueChangedCallback(evt => character.Defense = evt.newValue); row2.Add(defField);
@@ -492,7 +691,6 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor.UI
                     var svField = new FloatField("Spell Vamp") { value = character.SpellVamp }; svField.style.minWidth = 120; svField.RegisterValueChangedCallback(evt => character.SpellVamp = evt.newValue); row7.Add(svField);
                     inner.Add(row7);
 
-                    // Ability names (optional quick fields)
                     var abilRow = new VisualElement { style = { flexDirection = FlexDirection.Row } };
                     var pName = new TextField("Passive Name") { value = character.PassiveName }; pName.style.minWidth = 180; pName.RegisterValueChangedCallback(evt => character.PassiveName = evt.newValue); abilRow.Add(pName);
                     var a1 = new TextField("A1 Name") { value = character.Ability1Name }; a1.style.minWidth = 140; a1.RegisterValueChangedCallback(evt => character.Ability1Name = evt.newValue); abilRow.Add(a1);
@@ -500,7 +698,6 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor.UI
                     var a3 = new TextField("A3 Name") { value = character.Ability3Name }; a3.style.minWidth = 140; a3.RegisterValueChangedCallback(evt => character.Ability3Name = evt.newValue); abilRow.Add(a3);
                     inner.Add(abilRow);
 
-                    // Per-ability stats
                     var a1Row = new VisualElement { style = { flexDirection = FlexDirection.Row } };
                     a1Row.Add(new Label("A1") { style = { minWidth = 40, unityTextAlign = TextAnchor.MiddleLeft } });
                     var a1Cost = new IntegerField("Cost") { value = character.Ability1Cost }; a1Cost.style.minWidth = 100; a1Cost.RegisterValueChangedCallback(e => character.Ability1Cost = e.newValue); a1Row.Add(a1Cost);
@@ -536,7 +733,16 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor.UI
 
             // Bottom area: actions & status + description editors
             var actionsBar = new VisualElement { style = { flexDirection = FlexDirection.Row, alignItems = Align.Center, marginTop = 4 } };
-            var saveButton = new Button(() => { CharacterDatabase.SaveCharacters(characters, csvPath); EditorUtility.DisplayDialog("Saved", "Character Masterlist saved!", "OK"); }) { text = "💾 Save Changes" };
+            var saveButton = new Button(() =>
+            {
+                // 1) Save the CSV values
+                CharacterDatabase.SaveCharacters(characters, csvPath);
+
+                // 2) Also push object references (clips/controller/model) to the real ScriptableObject assets
+                SyncCharactersToScriptableObjects(characters);
+
+                EditorUtility.DisplayDialog("Saved", "Character Masterlist saved and clips synced to ScriptableObjects.", "OK");
+            }) { text = "💾 Save Changes" };
             actionsBar.Add(saveButton);
             (contentBottom ?? contentArea).Add(actionsBar);
 
@@ -583,6 +789,57 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor.UI
             RebuildDetails();
         }
 
+        // NEW: bring clip/controller/model selections from persistent ScriptableObjects into the transient UI list
+        private static void PopulateCharactersFromScriptableObjects(IEnumerable<CharacterData> list)
+        {
+            foreach (var ch in list)
+            {
+                if (string.IsNullOrWhiteSpace(ch?.Name)) continue;
+                var soObj = FindCharacterSOByName(ch.Name) as CharacterData;
+                if (soObj == null) continue;
+
+                ch.ModelPath = string.IsNullOrEmpty(ch.ModelPath) ? soObj.ModelPath : ch.ModelPath;
+                if (soObj.AnimatorController != null) ch.AnimatorController = soObj.AnimatorController;
+                if (soObj.IdleClip != null) ch.IdleClip = soObj.IdleClip;
+                if (soObj.WalkClip != null) ch.WalkClip = soObj.WalkClip;
+                if (soObj.RunClip != null) ch.RunClip = soObj.RunClip;
+                if (soObj.Ability1Clip != null) ch.Ability1Clip = soObj.Ability1Clip;
+                if (soObj.Ability2Clip != null) ch.Ability2Clip = soObj.Ability2Clip;
+                if (soObj.Ability3Clip != null) ch.Ability3Clip = soObj.Ability3Clip;
+                if (soObj.UltimateClip != null) ch.UltimateClip = soObj.UltimateClip;
+            }
+        }
+
+        private static void SyncCharactersToScriptableObjects(IEnumerable<CharacterData> list)
+        {
+            bool any = false;
+            foreach (var ch in list)
+            {
+                if (string.IsNullOrWhiteSpace(ch?.Name)) continue;
+                var soObj = FindCharacterSOByName(ch.Name) as CharacterData;
+                if (soObj == null) continue;
+
+                // Copy common fields that matter for controller building
+                soObj.ModelPath = ch.ModelPath;
+                soObj.AnimatorController = ch.AnimatorController;
+                soObj.IdleClip = ch.IdleClip;
+                soObj.WalkClip = ch.WalkClip;
+                soObj.RunClip = ch.RunClip;
+                soObj.Ability1Clip = ch.Ability1Clip;
+                soObj.Ability2Clip = ch.Ability2Clip;
+                soObj.Ability3Clip = ch.Ability3Clip;
+                soObj.UltimateClip = ch.UltimateClip;
+
+                EditorUtility.SetDirty(soObj);
+                any = true;
+            }
+            if (any)
+            {
+                AssetDatabase.SaveAssets();
+                AssetDatabase.Refresh();
+            }
+        }
+
         // -------- Prefab building helpers --------
         private static ScriptableObject FindCharacterSOByName(string name)
         {
@@ -595,7 +852,44 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor.UI
                 if (so == null) continue;
                 var f = so.GetType().GetField("Name", BindingFlags.Public | BindingFlags.Instance);
                 var value = f?.GetValue(so) as string;
-                if (string.Equals((value ?? string.Empty).Trim(), name.Trim(), System.StringComparison.InvariantCultureIgnoreCase))
+                if (string.IsNullOrEmpty(value)) continue;
+                if (string.Equals(value.Trim(), name.Trim(), System.StringComparison.InvariantCultureIgnoreCase))
+                    return so;
+            }
+            return null;
+        }
+
+        // NEW: find preset by class key
+        private static ScriptableObject FindAnimatorPresetForClassKey(string classKey)
+        {
+            if (string.IsNullOrWhiteSpace(classKey)) classKey = "Default";
+            var guids = AssetDatabase.FindAssets("t:AnimatorPreset");
+            foreach (var guid in guids)
+            {
+                var path = AssetDatabase.GUIDToAssetPath(guid);
+                var so = AssetDatabase.LoadAssetAtPath<ScriptableObject>(path);
+                if (so == null) continue;
+                var field = so.GetType().GetField("characterClassKey", BindingFlags.Public | BindingFlags.Instance);
+                var val = field?.GetValue(so) as string;
+                if (!string.IsNullOrEmpty(val) && string.Equals(val.Trim(), classKey.Trim(), System.StringComparison.InvariantCultureIgnoreCase))
+                    return so;
+            }
+            return null;
+        }
+
+        // NEW: find first CharacterData SO that has Class == classKey
+        private static ScriptableObject FindCharacterSOByClass(string classKey)
+        {
+            if (string.IsNullOrWhiteSpace(classKey)) classKey = "Default";
+            var guids = AssetDatabase.FindAssets("t:CharacterData");
+            foreach (var g in guids)
+            {
+                var path = AssetDatabase.GUIDToAssetPath(g);
+                var so = AssetDatabase.LoadAssetAtPath<ScriptableObject>(path);
+                if (so == null) continue;
+                var f = so.GetType().GetField("Class", BindingFlags.Public | BindingFlags.Instance);
+                var value = f?.GetValue(so) as string;
+                if (!string.IsNullOrEmpty(value) && string.Equals(value.Trim(), classKey.Trim(), System.StringComparison.InvariantCultureIgnoreCase))
                     return so;
             }
             return null;
@@ -656,6 +950,213 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor.UI
             }
         }
 
+        // NEW: Build and open a temporary test scene with AnimatorTestDriver
+        private static void TestAnimatorForCharacter(string name, string kind)
+        {
+            var so = FindCharacterSOByName(name);
+            if (so == null)
+            {
+                EditorUtility.DisplayDialog("Test Animator", $"Could not find ScriptableObject for '{name}'.", "OK");
+                return;
+            }
+
+            string prefabPath = null;
+            try
+            {
+                EditorUtility.DisplayProgressBar("Test Animator", $"Building '{name}'...", 0.3f);
+                prefabPath = TheCovenantKeepers.AI_Game_Assistant.Editor.CharacterPrefabBuilder.BuildCharacterPrefab(so, kind);
+            }
+            catch (System.Exception ex)
+            {
+                EditorUtility.ClearProgressBar();
+                Debug.LogError($"Build Prefab failed for test: {ex.Message}\n{ex}");
+                return;
+            }
+            finally { EditorUtility.ClearProgressBar(); }
+
+            if (string.IsNullOrEmpty(prefabPath))
+            {
+                EditorUtility.DisplayDialog("Test Animator", "Prefab build failed.", "OK");
+                return;
+            }
+
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+            if (prefab == null)
+            {
+                EditorUtility.DisplayDialog("Test Animator", $"Could not load prefab at\n{prefabPath}", "OK");
+                return;
+            }
+
+            // Create a fresh scene and drop the instance
+            var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
+            var instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+            if (instance == null)
+            {
+                EditorUtility.DisplayDialog("Test Animator", "Failed to instantiate prefab.", "OK");
+                return;
+            }
+
+            // Ensure driver is present
+            if (instance.GetComponent<TheCovenantKeepers.AI_Game_Assistant.AnimatorTestDriver>() == null)
+            {
+                instance.AddComponent<TheCovenantKeepers.AI_Game_Assistant.AnimatorTestDriver>();
+            }
+
+            // Simple ground plane
+            var ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
+            ground.name = "TestGround";
+            ground.transform.position = Vector3.zero;
+
+            // Position camera to view the character
+            var cam = Camera.main;
+            if (cam != null)
+            {
+                cam.transform.position = instance.transform.position + new Vector3(0, 1.6f, -6f);
+                cam.transform.rotation = Quaternion.LookRotation(instance.transform.position - cam.transform.position, Vector3.up);
+            }
+
+            Selection.activeObject = instance;
+            EditorGUIUtility.PingObject(instance);
+            Debug.Log($"🎬 Animator Test Scene ready for '{name}'. Press Play and use WASD + 1/2/3/4.");
+        }
+
+        // NEW: Builds/updates the prefab and ensures an AbilityEffectSpawner exists with a sensible spawn Transform
+        private static void CreateOrAssignSpawnerForCharacter(string name, string kind)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                EditorUtility.DisplayDialog("Assign Spawner", "Character name is empty.", "OK");
+                return;
+            }
+
+            var so = FindCharacterSOByName(name);
+            if (so == null)
+            {
+                EditorUtility.DisplayDialog("Assign Spawner", $"Could not find ScriptableObject for '{name}'.", "OK");
+                return;
+            }
+
+            string prefabPath = null;
+            try
+            {
+                EditorUtility.DisplayProgressBar("Assign Spawner", $"Building/Loading prefab for '{name}'...", 0.4f);
+                prefabPath = TheCovenantKeepers.AI_Game_Assistant.Editor.CharacterPrefabBuilder.BuildCharacterPrefab(so, kind);
+            }
+            catch (System.Exception ex)
+            {
+                EditorUtility.ClearProgressBar();
+                Debug.LogError($"Assign Spawner failed while building prefab: {ex.Message}\n{ex}");
+                EditorUtility.DisplayDialog("Assign Spawner", "Prefab build failed. See Console.", "OK");
+                return;
+            }
+            finally { EditorUtility.ClearProgressBar(); }
+
+            if (string.IsNullOrEmpty(prefabPath))
+            {
+                EditorUtility.DisplayDialog("Assign Spawner", "Prefab path missing.", "OK");
+                return;
+            }
+
+            GameObject root = null;
+            try
+            {
+                root = PrefabUtility.LoadPrefabContents(prefabPath);
+                if (root == null)
+                {
+                    EditorUtility.DisplayDialog("Assign Spawner", "Failed to open prefab contents.", "OK");
+                    return;
+                }
+
+                var spawner = root.GetComponent<TheCovenantKeepers.AI_Game_Assistant.AbilityEffectSpawner>();
+                if (spawner == null)
+                    spawner = root.AddComponent<TheCovenantKeepers.AI_Game_Assistant.AbilityEffectSpawner>();
+
+                spawner.spawn = GuessSpawnTransform(root.transform);
+
+                // Optional: make sure AnimatorTestDriver will trigger spawner if present
+                var driver = root.GetComponent<TheCovenantKeepers.AI_Game_Assistant.AnimatorTestDriver>();
+                if (driver != null) driver.triggerSpawnerOnKeys = true;
+
+                PrefabUtility.SaveAsPrefabAsset(root, prefabPath);
+                Debug.Log($"✅ Spawner assigned on prefab: {prefabPath}");
+                EditorGUIUtility.PingObject(AssetDatabase.LoadAssetAtPath<Object>(prefabPath));
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"Assign Spawner failed: {ex.Message}\n{ex}");
+            }
+            finally
+            {
+                if (root != null) PrefabUtility.UnloadPrefabContents(root);
+                AssetDatabase.SaveAssets();
+                AssetDatabase.Refresh();
+            }
+        }
+
+        private static void AddAbilitySpawnerToSelection()
+        {
+            var go = Selection.activeGameObject;
+            if (go == null)
+            {
+                EditorUtility.DisplayDialog("Add Spawner", "Select a GameObject in the scene or a prefab instance.", "OK");
+                return;
+            }
+
+            var spawner = go.GetComponent<TheCovenantKeepers.AI_Game_Assistant.AbilityEffectSpawner>();
+            if (spawner == null) spawner = go.AddComponent<TheCovenantKeepers.AI_Game_Assistant.AbilityEffectSpawner>();
+            spawner.spawn = GuessSpawnTransform(go.transform);
+
+            EditorUtility.SetDirty(go);
+            EditorGUIUtility.PingObject(go);
+            Debug.Log("✅ AbilityEffectSpawner added. Assign AbilityEffect assets for A1/A2/A3/Ult.");
+        }
+
+        private static Transform GuessSpawnTransform(Transform root)
+        {
+            var all = root.GetComponentsInChildren<Transform>(true);
+
+            // 1) Explicit marker wins
+            var explicitSpawn = all.FirstOrDefault(x =>
+                string.Equals(x.name, "VFX_Spawn", System.StringComparison.InvariantCultureIgnoreCase));
+            if (explicitSpawn != null) return explicitSpawn;
+
+            // 2) Weighted pick (skip obviously female-named bones if they exist in the rig)
+            bool Skip(Transform t)
+            {
+                var n = t.name.ToLowerInvariant();
+                return n.Contains("female");
+            }
+
+            Transform best = null; int bestScore = int.MinValue;
+            foreach (var tr in all)
+            {
+                if (Skip(tr)) continue;
+                var n = tr.name.ToLowerInvariant();
+                int score = int.MinValue;
+
+                if (n.Contains("righthand") || n.Contains("hand_r") || n.Contains("hand.r")) score = 100;
+                else if (n.Contains("weapon") || n.Contains("muzzle") || n.Contains("wrist")) score = 80;
+                else if (n.Contains("upperchest") || n.Contains("chest") || n.Contains("spine2") || n.Contains("spine1")) score = 60;
+
+                if (score > bestScore) { bestScore = score; best = tr; }
+            }
+            if (best != null) return best;
+
+            // 3) Create a neutral spawn under chest if found, else under root
+            Transform chest = all.FirstOrDefault(t => {
+                var n = t.name.ToLowerInvariant();
+                return n.Contains("upperchest") || n.Contains("chest") || n.Contains("spine2") || n.Contains("spine1");
+            });
+
+            var parent = chest != null ? chest : root;
+            var go = new GameObject("VFX_Spawn");
+            go.transform.SetParent(parent, false);
+            go.transform.localPosition = new Vector3(0f, 0.15f, 0.20f); // a few inches forward from chest
+            go.transform.localRotation = Quaternion.identity;
+            return go.transform;
+        }
+
+        // Added: Build all prefabs for the current filtered list (used by toolbar button)
         private void BuildPrefabsForFiltered()
         {
             if (characters == null || characters.Count == 0) return;
@@ -668,13 +1169,12 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor.UI
                         (!string.IsNullOrEmpty(c.Faction) && c.Faction.ToLowerInvariant().Contains(searchText.ToLowerInvariant()))
                   ).ToList();
 
-            int i = 0;
-            foreach (var ch in filtered)
+            for (int i = 0; i < filtered.Count; i++)
             {
-                i++;
+                var ch = filtered[i];
                 try
                 {
-                    EditorUtility.DisplayProgressBar("Build Prefabs", $"{i}/{filtered.Count}: {ch.Name}", (float)i / filtered.Count);
+                    EditorUtility.DisplayProgressBar("Build Prefabs", $"{i + 1}/{filtered.Count}: {ch.Name}", (float)(i + 1) / filtered.Count);
                     BuildPrefabForCharacterName(ch.Name, "Player");
                 }
                 catch { }

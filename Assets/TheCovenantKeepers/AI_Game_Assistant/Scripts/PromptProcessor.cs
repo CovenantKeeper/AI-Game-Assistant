@@ -28,7 +28,8 @@ namespace TheCovenantKeepers.AI_Game_Assistant
                 case AIProvider.ChatGPT:
                     return await ChatGPTClient.GenerateScriptAsync(fullPrompt, settings.apiKey, settings.apiUrl, settings.model);
                 case AIProvider.Gemini:
-                    return await GeminiClient.GenerateScriptAsync(settings.geminiApiKey, fullPrompt);
+                    // Fix: parameter order is (userPrompt, apiKey, modelName)
+                    return await GeminiClient.GenerateScriptAsync(fullPrompt, settings.geminiApiKey);
                 default:
                     Debug.LogError($"AI Provider '{provider}' is not supported.");
                     return null;

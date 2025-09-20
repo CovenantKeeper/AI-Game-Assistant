@@ -1,0 +1,80 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 94af3c3e6b85660428f4cc4ca67069d7, type: 3}
+  m_Name: Character_Sandalphon (migrated)
+  m_EditorClassIdentifier: TheCovenantKeepers.AI_Game_Assistant.Runtime::TheCovenantKeepers.AI_Game_Assistant.CharacterData
+  Icon: {fileID: 0}
+  Name: Sandalphon
+  Type: Angel
+  Role: Musician
+  Affiliation: Heaven
+  Class: Divine
+  SubClass: 
+  Faction: Celestial
+  Element: Sound
+  Gender: Male
+  ResourceType: 
+  health: 0
+  mana: 0
+  attack: 0
+  defense: 0
+  magic: 0
+  speed: 0
+  Strength: 0
+  Agility: 0
+  Intelligence: 0
+  Armor: 0
+  MagicResist: 0
+  AttackSpeed: 0
+  MoveSpeed: 0
+  Range: 0
+  CritChance: 0
+  CritDamageMultiplier: 2
+  ArmorPenetration: 0
+  MagicPenetration: 0
+  LifeSteal: 0
+  SpellVamp: 0
+  CooldownReduction: 0
+  Tenacity: 0
+  Level: 0
+  PassiveName: 
+  PassiveDescription: 
+  Ability1Name: 
+  Ability1Description: 
+  Ability2Name: 
+  Ability2Description: 
+  Ability3Name: 
+  Ability3Description: 
+  Ability1Cost: 0
+  Ability1Cooldown: 0
+  Ability1Range: 0
+  Ability1Target: 
+  Ability2Cost: 0
+  Ability2Cooldown: 0
+  Ability2Range: 0
+  Ability2Target: 
+  Ability3Cost: 0
+  Ability3Cooldown: 0
+  Ability3Range: 0
+  Ability3Target: 
+  UltimateAbility: HarmonicConcordance
+  UltimateDescription: 
+  LoreBackground: Angel who oversees heavenly music
+  ModelPath: Assets/TheCovenantKeepers/AI_Game_Assistant/Art/Models/Characters/Angel/Sandalphon.prefab
+  AnimatorController: {fileID: 0}
+  IdleClip: {fileID: 0}
+  WalkClip: {fileID: 0}
+  RunClip: {fileID: 0}
+  Ability1Clip: {fileID: 0}
+  Ability2Clip: {fileID: 0}
+  Ability3Clip: {fileID: 0}
+  UltimateClip: {fileID: 0}

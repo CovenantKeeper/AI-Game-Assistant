@@ -7,13 +7,13 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor
     public class SetupValidatorWindow : EditorWindow
     {
         // Unified under the same menu hierarchy
-        [MenuItem("The Covenant Keepers/AI Game Assistant/Diagnostics/Setup Validator")]
+        [MenuItem(TheCovenantKeepers.AI_Game_Assistant.Editor.TckMenu.Diagnostics + "/Setup Validator")]
         public static void ShowWindow()
         {
             GetWindow<SetupValidatorWindow>("Setup Validator");
         }
 
-        [MenuItem("The Covenant Keepers/AI Game Assistant/Diagnostics/Run Setup Validation")]
+        [MenuItem(TheCovenantKeepers.AI_Game_Assistant.Editor.TckMenu.Diagnostics + "/Run Setup Validation")]
         public static void RunValidationMenu()
         {
             RunValidation();

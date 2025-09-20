@@ -1,0 +1,207 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 34c3246a7238c9949b02985bd61468f2, type: 3}
+  m_Name: RPG_Rebel_Preset
+  m_EditorClassIdentifier: TheCovenantKeepers.AI_Game_Assistant.Runtime::AnimatorPreset
+  presetName: RPG_Rebel
+  characterClassKey: Rebel
+  parameters:
+  - name: Speed
+    type: 1
+  - name: VelocityY
+    type: 1
+  - name: IsGrounded
+    type: 4
+  - name: Jump
+    type: 9
+  - name: AttackLight
+    type: 9
+  - name: AttackHeavy
+    type: 9
+  - name: Dodge
+    type: 9
+  - name: Block
+    type: 4
+  - name: Hit
+    type: 9
+  - name: Die
+    type: 9
+  - name: CastA1
+    type: 9
+  - name: CastA2
+    type: 9
+  - name: CastA3
+    type: 9
+  - name: CastUlt
+    type: 9
+  states:
+  - name: Idle
+    animationClip: {fileID: 7400000, guid: a44f954d7495f4e41abde574403edb10, type: 3}
+    isDefaultState: 1
+  - name: Walk
+    animationClip: {fileID: 7400000, guid: 470623a6e8539204cb5f9ceedb9675e9, type: 3}
+    isDefaultState: 0
+  - name: Run
+    animationClip: {fileID: 7400000, guid: 5151d6ee4cddef94880ff559dcda13c3, type: 3}
+    isDefaultState: 0
+  - name: Jump
+    animationClip: {fileID: 1827226128182048838, guid: 608e04e6fb5479c47bf2cfcac43377ba, type: 3}
+    isDefaultState: 0
+  - name: Fall
+    animationClip: {fileID: 1827226128182048838, guid: bf931894d92f804478ef684be0c54266, type: 3}
+    isDefaultState: 0
+  - name: Land
+    animationClip: {fileID: 7400002, guid: d50565a91d838d746a1647bcb34d5b10, type: 3}
+    isDefaultState: 0
+  - name: LightAttack
+    animationClip: {fileID: 7400000, guid: 0799365aa9bf37644b140022e57f7c3a, type: 3}
+    isDefaultState: 0
+  - name: HeavyAttack
+    animationClip: {fileID: 1827226128182048838, guid: f21b60013b235a049abe20c4478d913d, type: 3}
+    isDefaultState: 0
+  - name: Dodge
+    animationClip: {fileID: 1827226128182048838, guid: 02552e205aa98864ea0a0c626d354db4, type: 3}
+    isDefaultState: 0
+  - name: Block
+    animationClip: {fileID: 1827226128182048838, guid: 74c72d480457da54882813d2186fa6ca, type: 3}
+    isDefaultState: 0
+  - name: HitReact
+    animationClip: {fileID: 1827226128182048838, guid: 74c72d480457da54882813d2186fa6ca, type: 3}
+    isDefaultState: 0
+  - name: Death
+    animationClip: {fileID: 1827226128182048838, guid: 223d3dca1909f2843b360a4ba04ffb51, type: 3}
+    isDefaultState: 0
+  - name: Ability1
+    animationClip: {fileID: 0}
+    isDefaultState: 0
+  - name: Ability2
+    animationClip: {fileID: 0}
+    isDefaultState: 0
+  - name: Ability3
+    animationClip: {fileID: 0}
+    isDefaultState: 0
+  - name: Ultimate
+    animationClip: {fileID: 0}
+    isDefaultState: 0
+  transitions:
+  - sourceState: Idle
+    destinationState: Walk
+    hasExitTime: 0
+    duration: 0.1
+    conditions:
+    - parameterName: Speed
+      mode: 3
+      threshold: 0.05
+  - sourceState: Walk
+    destinationState: Idle
+    hasExitTime: 0
+    duration: 0.1
+    conditions:
+    - parameterName: Speed
+      mode: 4
+      threshold: 0.05
+  - sourceState: Walk
+    destinationState: Run
+    hasExitTime: 0
+    duration: 0.1
+    conditions:
+    - parameterName: Speed
+      mode: 3
+      threshold: 0.6
+  - sourceState: Run
+    destinationState: Walk
+    hasExitTime: 0
+    duration: 0.1
+    conditions:
+    - parameterName: Speed
+      mode: 4
+      threshold: 0.6
+  - sourceState: 
+    destinationState: Jump
+    hasExitTime: 0
+    duration: 0.05
+    conditions:
+    - parameterName: Jump
+      mode: 1
+      threshold: 0
+  - sourceState: 
+    destinationState: Dodge
+    hasExitTime: 0
+    duration: 0.05
+    conditions:
+    - parameterName: Dodge
+      mode: 1
+      threshold: 0
+  - sourceState: 
+    destinationState: LightAttack
+    hasExitTime: 0
+    duration: 0.05
+    conditions:
+    - parameterName: AttackLight
+      mode: 1
+      threshold: 0
+  - sourceState: 
+    destinationState: HeavyAttack
+    hasExitTime: 0
+    duration: 0.05
+    conditions:
+    - parameterName: AttackHeavy
+      mode: 1
+      threshold: 0
+  - sourceState: 
+    destinationState: HitReact
+    hasExitTime: 0
+    duration: 0.05
+    conditions:
+    - parameterName: Hit
+      mode: 1
+      threshold: 0
+  - sourceState: 
+    destinationState: Death
+    hasExitTime: 0
+    duration: 0.05
+    conditions:
+    - parameterName: Die
+      mode: 1
+      threshold: 0
+  - sourceState: 
+    destinationState: Ability1
+    hasExitTime: 0
+    duration: 0.05
+    conditions:
+    - parameterName: CastA1
+      mode: 1
+      threshold: 0
+  - sourceState: 
+    destinationState: Ability2
+    hasExitTime: 0
+    duration: 0.05
+    conditions:
+    - parameterName: CastA2
+      mode: 1
+      threshold: 0
+  - sourceState: 
+    destinationState: Ability3
+    hasExitTime: 0
+    duration: 0.05
+    conditions:
+    - parameterName: CastA3
+      mode: 1
+      threshold: 0
+  - sourceState: 
+    destinationState: Ultimate
+    hasExitTime: 0
+    duration: 0.05
+    conditions:
+    - parameterName: CastUlt
+      mode: 1
+      threshold: 0

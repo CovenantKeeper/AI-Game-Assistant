@@ -1,0 +1,250 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &155582469943671913
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3505787291527809838}
+  - component: {fileID: 6781320145975238496}
+  - component: {fileID: 7013709909892862591}
+  - component: {fileID: 457759944455451466}
+  - component: {fileID: 8198243925694823494}
+  m_Layer: 0
+  m_Name: Gabriel
+  m_TagString: Player
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &3505787291527809838
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 155582469943671913}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 7706077390003087023}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &6781320145975238496
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 155582469943671913}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e6568d90cb8123c4ca6ccd6d4fa0c3b4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TheCovenantKeepers.AI_Game_Assistant.Runtime::TheCovenantKeepers.AI_Game_Assistant.CharacterMetadata
+  sourceData: {fileID: 11400000, guid: 2ff70f6c4aa724c4799a845f7440265c, type: 2}
+  sourceGuid: 2ff70f6c4aa724c4799a845f7440265c
+  prefabKind: Player
+--- !u!143 &7013709909892862591
+CharacterController:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 155582469943671913}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Height: 1.9634584
+  m_Radius: 0.9817292
+  m_SlopeLimit: 45
+  m_StepOffset: 0.4908646
+  m_SkinWidth: 0.08
+  m_MinMoveDistance: 0.001
+  m_Center: {x: 0, y: 0.8730498, z: 0}
+--- !u!54 &457759944455451466
+Rigidbody:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 155582469943671913}
+  serializedVersion: 5
+  m_Mass: 1
+  m_LinearDamping: 0
+  m_AngularDamping: 0.05
+  m_CenterOfMass: {x: 0, y: 0, z: 0}
+  m_InertiaTensor: {x: 1, y: 1, z: 1}
+  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ImplicitCom: 1
+  m_ImplicitTensor: 1
+  m_UseGravity: 0
+  m_IsKinematic: 1
+  m_Interpolate: 0
+  m_Constraints: 0
+  m_CollisionDetection: 0
+--- !u!114 &8198243925694823494
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 155582469943671913}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0251431b8dde8904a9ee8ddd0a8c6a3b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TheCovenantKeepers.AI_Game_Assistant.Runtime::TheCovenantKeepers.AI_Game_Assistant.AbilityEffectSpawner
+  spawn: {fileID: 7705627163845655953}
+  A1: {fileID: 0}
+  A2: {fileID: 0}
+  A3: {fileID: 0}
+  Ult: {fileID: 0}
+--- !u!1 &4460340169262530603
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3237174705167040791}
+  - component: {fileID: 619479463525622807}
+  m_Layer: 0
+  m_Name: VFX_Spawner
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &3237174705167040791
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4460340169262530603}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 2.593}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 7706191533204873793}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &619479463525622807
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4460340169262530603}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0251431b8dde8904a9ee8ddd0a8c6a3b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TheCovenantKeepers.AI_Game_Assistant.Runtime::TheCovenantKeepers.AI_Game_Assistant.AbilityEffectSpawner
+  spawn: {fileID: 3237174705167040791}
+  A1: {fileID: 11400000, guid: c3cb39f9923c15f49911a50c074b9893, type: 2}
+  A2: {fileID: 0}
+  A3: {fileID: 0}
+  Ult: {fileID: 0}
+--- !u!1001 &7701508803216366637
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 3505787291527809838}
+    m_Modifications:
+    - target: {fileID: 1752634011024786, guid: 3f581b8f5dacdc54b8e405d2157e1d8b, type: 3}
+      propertyPath: m_Name
+      value: ModularCharacter_01
+      objectReference: {fileID: 0}
+    - target: {fileID: 4571756472629890, guid: 3f581b8f5dacdc54b8e405d2157e1d8b, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4571756472629890, guid: 3f581b8f5dacdc54b8e405d2157e1d8b, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4571756472629890, guid: 3f581b8f5dacdc54b8e405d2157e1d8b, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4571756472629890, guid: 3f581b8f5dacdc54b8e405d2157e1d8b, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4571756472629890, guid: 3f581b8f5dacdc54b8e405d2157e1d8b, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4571756472629890, guid: 3f581b8f5dacdc54b8e405d2157e1d8b, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4571756472629890, guid: 3f581b8f5dacdc54b8e405d2157e1d8b, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4571756472629890, guid: 3f581b8f5dacdc54b8e405d2157e1d8b, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4571756472629890, guid: 3f581b8f5dacdc54b8e405d2157e1d8b, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4571756472629890, guid: 3f581b8f5dacdc54b8e405d2157e1d8b, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 95001415476118014, guid: 3f581b8f5dacdc54b8e405d2157e1d8b, type: 3}
+      propertyPath: m_Controller
+      value: 
+      objectReference: {fileID: 9100000, guid: ca6a113e4667cc14b9ad75fe137ac819, type: 2}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects:
+    - targetCorrespondingSourceObject: {fileID: 4685212479782508, guid: 3f581b8f5dacdc54b8e405d2157e1d8b, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 3237174705167040791}
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 3f581b8f5dacdc54b8e405d2157e1d8b, type: 3}
+--- !u!4 &7705627163845655953 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 4119215403409852, guid: 3f581b8f5dacdc54b8e405d2157e1d8b, type: 3}
+  m_PrefabInstance: {fileID: 7701508803216366637}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &7706077390003087023 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 4571756472629890, guid: 3f581b8f5dacdc54b8e405d2157e1d8b, type: 3}
+  m_PrefabInstance: {fileID: 7701508803216366637}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &7706191533204873793 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 4685212479782508, guid: 3f581b8f5dacdc54b8e405d2157e1d8b, type: 3}
+  m_PrefabInstance: {fileID: 7701508803216366637}
+  m_PrefabAsset: {fileID: 0}
