@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: d63e639fcb6f70d43b7892371e2b96c3
+timeCreated: 1556687462
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 143468
+  packageName: POLYGON Modular Fantasy Hero Characters - Low Poly 3D Art by Synty
+  packageVersion: 1.3.2
+  assetPath: Assets/PolygonFantasyHeroCharacters/Prefabs/Characters_ModularParts_Static/Chr_Eyebrow_Male_03_Static.prefab
+  uploadId: 756033

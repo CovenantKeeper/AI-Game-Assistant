@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: 2cce83b49c5102d4b85897721be44ad2
+timeCreated: 1534141199
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 9100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 63772
+  packageName: RPG Character Mecanim Animation Pack
+  packageVersion: 7.2.1
+  assetPath: Assets/ExplosiveLLC/RPG Character Mecanim Animation Pack/Demo Elements/Animation/Moving
+    Platform.controller
+  uploadId: 788702

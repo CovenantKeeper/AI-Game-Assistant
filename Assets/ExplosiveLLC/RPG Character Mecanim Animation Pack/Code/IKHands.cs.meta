@@ -1,0 +1,19 @@
+fileFormatVersion: 2
+guid: 23f93422e3e033e4aa4d80c9c8d0d939
+timeCreated: 1472225585
+licenseType: Store
+MonoImporter:
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 63772
+  packageName: RPG Character Mecanim Animation Pack
+  packageVersion: 7.2.1
+  assetPath: Assets/ExplosiveLLC/RPG Character Mecanim Animation Pack/Code/IKHands.cs
+  uploadId: 788702

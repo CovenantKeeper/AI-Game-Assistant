@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: cdcd31ac69744ec4d928e5d032e933a4
+timeCreated: 1554786161
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 143468
+  packageName: POLYGON Modular Fantasy Hero Characters - Low Poly 3D Art by Synty
+  packageVersion: 1.3.2
+  assetPath: Assets/PolygonFantasyHeroCharacters/Prefabs/Weapons/SM_Wep_Sword_Cover_01.prefab
+  uploadId: 756033

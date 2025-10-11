@@ -56,3 +56,41 @@
 
 #top-scroll { min-height: 200px; }
 #bottom-scroll { min-height: 120px; }
+
+/* Root layout */
+.assistant-root {
+    flex-grow: 1;
+    flex-direction: column;
+    padding: 6px;
+}
+
+/* Tabs row */
+.tabbar-host {
+    flex-direction: row;
+    margin-bottom: 6px;
+}
+
+/* Where panels get mounted */
+.panels-root {
+    flex-grow: 1;
+}
+
+/* Common content helpers */
+.section-header {
+    font-size: 14px;
+    -unity-font-style: bold;
+    margin-bottom: 6px;
+}
+
+.group-box {
+    border-width: 1px;
+    border-color: rgba(50, 50, 50, 0.9);
+    border-radius: 4px;
+    padding: 8px;
+    margin-top: 8px;
+}
+
+/* Make ScrollView content breathe a bit */
+.unity-scroll-view__content-container {
+    padding: 6px;
+}

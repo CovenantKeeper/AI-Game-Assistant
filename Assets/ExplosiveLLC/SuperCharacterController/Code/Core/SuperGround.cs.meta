@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 303a4b1cde6b94944a43412af6008f37
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 63772
+  packageName: RPG Character Mecanim Animation Pack
+  packageVersion: 7.2.1
+  assetPath: Assets/ExplosiveLLC/SuperCharacterController/Code/Core/SuperGround.cs
+  uploadId: 788702

@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: a25a6277a82f5af429c699ec6086bb3d
+timeCreated: 1556687484
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 143468
+  packageName: POLYGON Modular Fantasy Hero Characters - Low Poly 3D Art by Synty
+  packageVersion: 1.3.2
+  assetPath: Assets/PolygonFantasyHeroCharacters/Prefabs/Characters_ModularParts_Static/Chr_KneeAttachLeft_03_Static.prefab
+  uploadId: 756033

@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 26e92553ace791e4fa0f935ee0cc84c2
+timeCreated: 1554786136
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 143468
+  packageName: POLYGON Modular Fantasy Hero Characters - Low Poly 3D Art by Synty
+  packageVersion: 1.3.2
+  assetPath: Assets/PolygonFantasyHeroCharacters/Prefabs/Weapons/SM_Wep_Joust_01.prefab
+  uploadId: 756033

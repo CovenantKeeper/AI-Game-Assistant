@@ -1,0 +1,79 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 564641c11c1180040b4e806d9af42819, type: 3}
+  m_Name: CHR_Raphael
+  m_EditorClassIdentifier: TheCovenantKeepers.AI_Game_Assistant.Runtime::TheCovenantKeepers.AI_Game_Assistant.RpgCharacterSO
+  characterName: Raphael
+  class: Divine Healer
+  faction: Seraphim Order
+  type: Archangel
+  role: Healer
+  affiliation: Heavenly Host
+  element: Spirit
+  gender: Male
+  subClass: 
+  resourceType: Faith
+  weaponType: 
+  modelPath: 
+  modelPrefab: {fileID: 0}
+  controller: {fileID: 0}
+  animatorPreset: {fileID: 0}
+  health: 850
+  mana: 400
+  attack: 80
+  defense: 90
+  magic: 250
+  speed: 34
+  strength: 0
+  agility: 0
+  intelligence: 0
+  armor: 0
+  magicResist: 0
+  attackSpeed: 0
+  moveSpeed: 0
+  range: 0
+  critChance: 0
+  critDamageMultiplier: 2
+  armorPenetration: 0
+  magicPenetration: 0
+  lifeSteal: 0
+  spellVamp: 0
+  cooldownReduction: 0
+  tenacity: 0
+  level: 0
+  loreBackground: Renowned for healing and restoring hope.
+  ultimateAbility: Healing Grace
+  Idle: {fileID: 0}
+  Walk: {fileID: 0}
+  Run: {fileID: 0}
+  Jump: {fileID: 0}
+  Fall: {fileID: 0}
+  Land: {fileID: 0}
+  LightAttack: {fileID: 0}
+  HeavyAttack: {fileID: 0}
+  Block: {fileID: 0}
+  Dodge: {fileID: 0}
+  HitReact: {fileID: 0}
+  Death: {fileID: 0}
+  Ability1: {fileID: 0}
+  Ability2: {fileID: 0}
+  Ability3: {fileID: 0}
+  Ultimate: {fileID: 0}
+  passiveName: 50
+  passiveDescription: Sacred Touch
+  ability1Name: Heal an ally instantly.
+  ability1Description: Guardian's Light
+  ability2Name: Protects and heals over time.
+  ability2Description: Restorative Wave
+  ability3Name: Heals allies in an area.
+  ability3Description: Divine Restoration
+  ultimateDescription: Revives a fallen ally with full health.

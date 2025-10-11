@@ -12,7 +12,7 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor
     /// </summary>
     public class AnimatorControllerAutoRepairPostprocessor : AssetPostprocessor
     {
-        [MenuItem(TheCovenantKeepers.AI_Game_Assistant.Editor.TckMenu.Animator + "/Repair Selected AnimatorController(s)")]
+        //[MenuItem(TheCovenantKeepers.AI_Game_Assistant.Editor.TckMenu.Animator + "/Repair Selected AnimatorController(s)")]
         public static void RepairSelectedAnimatorControllers()
         {
             int fixedCount = 0;
@@ -29,7 +29,7 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor
             EditorUtility.DisplayDialog("Repair AnimatorControllers", fixedCount > 0 ? $"Fixed {fixedCount} controller(s)." : "No AnimatorController selected.", "OK");
         }
 
-        [MenuItem(TheCovenantKeepers.AI_Game_Assistant.Editor.TckMenu.Animator + "/Repair All AnimatorControllers In Project", priority = 201)]
+        //[MenuItem(TheCovenantKeepers.AI_Game_Assistant.Editor.TckMenu.Animator + "/Repair All AnimatorControllers In Project", priority = 201)]
         public static void RepairAllAnimatorControllersInProject()
         {
             var guids = AssetDatabase.FindAssets("t:AnimatorController");

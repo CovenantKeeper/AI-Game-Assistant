@@ -16,7 +16,7 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor
     /// </summary>
     public static class AnimatorTransitionsFixer
     {
-        [MenuItem(TheCovenantKeepers.AI_Game_Assistant.Editor.TckMenu.Animator + "/Add/Repair Ability Transitions (Selected)")]
+        //[MenuItem(TheCovenantKeepers.AI_Game_Assistant.Editor.TckMenu.Animator + "/Add/Repair Ability Transitions (Selected)")]
         public static void FixSelected()
         {
             var selection = Selection.objects;
@@ -40,7 +40,7 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor
                 EditorUtility.DisplayDialog("Ability Transitions", $"Controllers: {processed}\nTransitions ensured/updated: {fixedCtr}", "OK");
         }
 
-        [MenuItem(TheCovenantKeepers.AI_Game_Assistant.Editor.TckMenu.Clips + "/Disable Loop On Ability Clips (Selected Controller)")]
+        //[MenuItem(TheCovenantKeepers.AI_Game_Assistant.Editor.TckMenu.Clips + "/Disable Loop On Ability Clips (Selected Controller)")]
         public static void DisableLoopOnAbilityClipsSelected()
         {
             var ac = Selection.activeObject as AnimatorController;

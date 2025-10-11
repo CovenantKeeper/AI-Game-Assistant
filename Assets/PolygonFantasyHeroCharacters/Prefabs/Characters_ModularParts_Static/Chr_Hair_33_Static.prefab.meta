@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: c1900d46d91e4dc4a92ab5446e10b570
+timeCreated: 1556687368
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 143468
+  packageName: POLYGON Modular Fantasy Hero Characters - Low Poly 3D Art by Synty
+  packageVersion: 1.3.2
+  assetPath: Assets/PolygonFantasyHeroCharacters/Prefabs/Characters_ModularParts_Static/Chr_Hair_33_Static.prefab
+  uploadId: 756033

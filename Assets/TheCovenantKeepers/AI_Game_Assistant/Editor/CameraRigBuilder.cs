@@ -6,7 +6,7 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor
 {
     public static class CameraRigBuilder
     {
-        [MenuItem(TheCovenantKeepers.AI_Game_Assistant.Editor.TckMenu.Build + "/Setup Scene Camera Rig", priority = 120)]
+        // Menu item removed; keep callable from Assistant Window
         public static void SetupSceneCameraRig()
         {
             // Try reusing existing MainCamera

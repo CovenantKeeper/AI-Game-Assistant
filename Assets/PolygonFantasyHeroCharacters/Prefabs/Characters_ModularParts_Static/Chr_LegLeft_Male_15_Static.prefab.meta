@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 1a06c6155f7cc9e4d81abc5fbaf401ba
+timeCreated: 1556687541
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 143468
+  packageName: POLYGON Modular Fantasy Hero Characters - Low Poly 3D Art by Synty
+  packageVersion: 1.3.2
+  assetPath: Assets/PolygonFantasyHeroCharacters/Prefabs/Characters_ModularParts_Static/Chr_LegLeft_Male_15_Static.prefab
+  uploadId: 756033

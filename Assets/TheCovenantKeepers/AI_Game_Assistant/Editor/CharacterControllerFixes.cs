@@ -9,7 +9,7 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor
 {
     public static class CharacterControllerFixes
     {
-        [MenuItem(TheCovenantKeepers.AI_Game_Assistant.Editor.TckMenu.Character + "/Fix Selected Character Controller(s)", priority = 50)]
+        //[MenuItem(TheCovenantKeepers.AI_Game_Assistant.Editor.TckMenu.Character + "/Fix Selected Character Controller(s)", priority = 50)]
         public static void FixSelected()
         {
             int fixedCount = 0;
@@ -22,7 +22,7 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor
                 "OK");
         }
 
-        [MenuItem(TheCovenantKeepers.AI_Game_Assistant.Editor.TckMenu.Character + "/Fix Character Controllers In Scene", priority = 51)]
+        //[MenuItem(TheCovenantKeepers.AI_Game_Assistant.Editor.TckMenu.Character + "/Fix Character Controllers In Scene", priority = 51)]
         public static void FixInScene()
         {
             var controllers = UnityEngine.Object.FindObjectsOfType<CharacterController>();

@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 2d547d3b870cc8c49808db18de0a3cbb
+timeCreated: 1556687400
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 143468
+  packageName: POLYGON Modular Fantasy Hero Characters - Low Poly 3D Art by Synty
+  packageVersion: 1.3.2
+  assetPath: Assets/PolygonFantasyHeroCharacters/Prefabs/Characters_ModularParts_Static/Chr_LegRight_Female_11_Static.prefab
+  uploadId: 756033

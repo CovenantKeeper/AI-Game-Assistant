@@ -42,13 +42,15 @@ namespace TheCovenantKeepers.AI_Game_Assistant
             "SubClass,ResourceType,Strength,Agility,Intelligence,Armor,MagicResist,AttackSpeed,MoveSpeed,Range,CritChance,CritDamageMultiplier,ArmorPenetration,MagicPenetration,LifeSteal,SpellVamp,CooldownReduction,Tenacity," +
             "PassiveName,PassiveDescription,Ability1Name,Ability1Description,Ability2Name,Ability2Description,Ability3Name,Ability3Description,UltimateDescription," +
             "Ability1Cost,Ability1Cooldown,Ability1Range,Ability1Target,Ability2Cost,Ability2Cooldown,Ability2Range,Ability2Target,Ability3Cost,Ability3Cooldown,Ability3Range,Ability3Target";
+        private const string CharacterHeader13 =
+    "Name,Class,Faction,Alignment,Level,Health,Attack,Defense,Speed,ModelPath,AnimatorPreset,AnimatorControllerPath,Abilities";
 
         // ----------------------------------------------------
         // Public generators
         // ----------------------------------------------------
         public static async Task GenerateCharacterMasterlistFromPrompt(string prompt, string savePath, AIProvider provider)
         {
-            // Base header + extended MOBA/MMORPG stats
+            // Keep your existing 56-col prompt text if you want richer rows; the reader no longer cares about the schema
             const string header = CharacterHeader;
 
             string fullPrompt =
@@ -60,14 +62,30 @@ namespace TheCovenantKeepers.AI_Game_Assistant
             string csv = await GenerateWithSelectedProvider(fullPrompt, provider);
             if (string.IsNullOrWhiteSpace(csv)) { Debug.LogError("❌ No response from provider."); return; }
 
-            csv = EnsureCsvHasHeader(SanitizeToCsv(csv), header);
-            csv = TryRepairCsvRows(csv, header); // attempt to auto-fix common LLM omissions
-            if (!TryValidateCsv(csv, header, out var validationError))
+            // Strict 56-column path (no flexible merge/normalize)
+            csv = EnsureCsvHasHeader(SanitizeToCsv(csv), CharacterHeader);
+            csv = TryRepairCsvRows(csv, CharacterHeader);
+            if (!TryValidateCsv(csv, CharacterHeader, out var validationError))
             {
                 ReportCsvError(validationError, csv);
                 return;
             }
 
+
+            // Dynamic CSV extraction — NO fixed header/column count
+            var block = CsvFlex.ExtractMergedCsvByDominantSchema(csv, minDataRows: 1);
+            if (block == null || string.IsNullOrWhiteSpace(block.Header) || block.DataLines.Count == 0)
+            {
+                ReportCsvError("Could not detect a consistent CSV block (header + rows).", csv);
+                return;
+            }
+            Debug.Log($"[CSV] Dominant schema: {block.ColumnCount} cols; merged rows: {block.DataLines.Count}");
+            csv = block.ToCsv();
+
+
+            csv = CsvFlex.NormalizeToHeader(csv, CharacterHeader); // <- your existing 56-col constant
+
+            // Save/import as before
             AssistantPaths.EnsureDirectoryForFile(savePath);
             System.IO.File.WriteAllText(savePath, csv);
 #if UNITY_EDITOR
@@ -481,5 +499,16 @@ namespace TheCovenantKeepers.AI_Game_Assistant
             string sanitizedClassName = Regex.Replace(scriptName, @"\s+", "");
             return templateContent.Replace("{{ClassName}}", sanitizedClassName);
         }
+        // Map any CSV (whatever header) into a specific target header order.
+        // Fields not present in the source header are left blank.
+
+        private static string QuoteIfNeeded(string v)
+        {
+            if (string.IsNullOrEmpty(v)) return "";
+            bool need = v.IndexOfAny(new[] { ',', '"', '\n', '\r', ';' }) >= 0;
+            if (v.Contains("\"")) v = v.Replace("\"", "\"\"");
+            return need ? $"\"{v}\"" : v;
+        }
+
     }
 }

@@ -11,6 +11,33 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor
 {
     public static class AnimatorPresetTemplates
     {
+        private const string BowFolder = "Assets/ExplosiveLLC/RPG Character Mecanim Animation Pack/Animations/2Hand-Bow";
+        private const string PackRoot = "Assets/ExplosiveLLC/RPG Character Mecanim Animation Pack/Animations";
+
+        // Resolve a subfolder inside the ExplosiveLLC pack that contains all keywords
+        private static string ResolvePackFolder(params string[] keywords)
+        {
+            if (!AssetDatabase.IsValidFolder(PackRoot)) return null;
+            var guids = AssetDatabase.FindAssets("t:folder", new[] { PackRoot });
+            int bestScore = int.MinValue; string bestPath = null;
+            foreach (var g in guids)
+            {
+                var p = AssetDatabase.GUIDToAssetPath(g).Replace('\\','/');
+                var low = p.ToLowerInvariant();
+                int score = 0; bool ok = true;
+                foreach (var k in keywords ?? Array.Empty<string>())
+                {
+                    var kk = (k ?? string.Empty).ToLowerInvariant();
+                    if (string.IsNullOrEmpty(kk)) continue;
+                    if (!low.Contains(kk)) { ok = false; break; }
+                    score += 10;
+                }
+                if (!ok) continue;
+                if (score > bestScore) { bestScore = score; bestPath = p; }
+            }
+            return bestPath;
+        }
+
         // Utility: find a type by simple name across loaded assemblies (fallback only)
         private static Type FindTypeByName(string simpleName)
         {
@@ -241,26 +268,254 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor
             return preset;
         }
 
+        // Find best existing preset for a class (prefer our folder and filled states)
+        private static string FindBestPresetPathForClass(string classKey)
+        {
+            if (string.IsNullOrWhiteSpace(classKey)) return null;
+            var guids = AssetDatabase.FindAssets("t:AnimatorPreset");
+            if (guids == null || guids.Length == 0) return null;
+
+            string root = GetAssistantPackageRoot();
+            string preferredFolder = (root + "/AnimatorPresets").Replace('\\','/');
+
+            string bestPath = null; int bestScore = int.MinValue;
+            foreach (var g in guids)
+            {
+                var path = AssetDatabase.GUIDToAssetPath(g);
+                var so = AssetDatabase.LoadAssetAtPath<ScriptableObject>(path);
+                if (so == null) continue;
+                var key = so.GetType().GetField("characterClassKey", BindingFlags.Public | BindingFlags.Instance)?.GetValue(so) as string;
+                if (string.IsNullOrEmpty(key) || !string.Equals(key, classKey, StringComparison.InvariantCultureIgnoreCase))
+                    continue;
+                int score = 0;
+                var p = (path ?? string.Empty).Replace('\\','/');
+                if (p.StartsWith(preferredFolder, StringComparison.InvariantCultureIgnoreCase)) score += 1000;
+                var fileName = System.IO.Path.GetFileNameWithoutExtension(p).ToLowerInvariant();
+                if (fileName.Contains(classKey.ToLowerInvariant())) score += 50;
+                try
+                {
+                    var statesField = so.GetType().GetField("states", BindingFlags.Public | BindingFlags.Instance);
+                    var states = statesField?.GetValue(so) as IEnumerable;
+                    int filled = 0, total = 0;
+                    if (states != null)
+                    {
+                        foreach (var s in states)
+                        {
+                            if (s == null) continue;
+                            total++;
+                            var clip = s.GetType().GetField("animationClip", BindingFlags.Public | BindingFlags.Instance)?.GetValue(s) as Motion;
+                            if (clip != null) filled++;
+                        }
+                    }
+                    score += filled * 5;
+                    score += total;
+                }
+                catch { }
+
+                if (score > bestScore) { bestScore = score; bestPath = path; }
+            }
+            return bestPath;
+        }
+
         // Public: Create and save an RPG preset for a specific class key without prompting. Returns asset path.
         public static string CreateRpgPresetForClassAuto(string classKey)
         {
-            var preset = BuildRpgPresetObject(classKey ?? "Default", null);
-            if (preset == null)
+            var existing = FindBestPresetPathForClass(classKey ?? "Default");
+            if (!string.IsNullOrEmpty(existing))
             {
-                EditorUtility.DisplayDialog("AnimatorPreset Types Missing", "Could not locate AnimatorPreset and nested types. Ensure AnimatorPreset.cs exists and compiles.", "OK");
-                return null;
+                Debug.Log($"Using existing AnimatorPreset for class '{classKey}': {existing}");
+                return existing;
             }
+
+            if (!string.IsNullOrWhiteSpace(classKey) && classKey.Trim().Equals("Archer", StringComparison.InvariantCultureIgnoreCase))
+            {
+                var archerPath = CreateArcherBowPresetAsset();
+                if (!string.IsNullOrEmpty(archerPath)) return archerPath;
+            }
+
+            // Warrior 1H / 2H (prefer 1H if ambiguous)
+            if (!string.IsNullOrWhiteSpace(classKey) && classKey.IndexOf("warrior", StringComparison.InvariantCultureIgnoreCase) >= 0)
+            {
+                string folder = ResolvePackFolder("1hand", "sword") ?? ResolvePackFolder("one", "hand", "sword");
+                string key = "Warrior1H"; string name = "Warrior_1H";
+                if (classKey.IndexOf("2", StringComparison.InvariantCultureIgnoreCase) >= 0 || classKey.IndexOf("two", StringComparison.InvariantCultureIgnoreCase) >= 0)
+                {
+                    folder = ResolvePackFolder("2hand", "sword") ?? ResolvePackFolder("two", "hand", "sword") ?? folder;
+                    key = "Warrior2H"; name = "Warrior_2H";
+                }
+                if (!string.IsNullOrEmpty(folder))
+                {
+                    var map = new Dictionary<string,string[]>
+                    {
+                        ["Idle"] = new[]{"idle"},
+                        ["Walk"] = new[]{"walk"},
+                        ["Run"] = new[]{"run"},
+                        ["LightAttack"] = new[]{"attack1","slash","light"},
+                        ["HeavyAttack"] = new[]{"attack2","heavy","smash"},
+                        ["Dodge"] = new[]{"dodge","roll","evade"},
+                        ["Block"] = new[]{"block","guard","shield"},
+                        ["HitReact"] = new[]{"hit","hurt"},
+                        ["Death"] = new[]{"die","death"},
+                        ["Jump"] = new[]{"jump"},
+                        ["Fall"] = new[]{"fall"},
+                        ["Land"] = new[]{"land"},
+                        ["Ability1"] = new[]{"attack3","combo"},
+                        ["Ability2"] = new[]{"attack4","power"},
+                        ["Ability3"] = new[]{"attack5","special"},
+                        ["Ultimate"] = new[]{"ultimate","finisher","power"}
+                    };
+                    var p = CreatePresetWithFolder("Warrior", key, name, folder, map);
+                    if (!string.IsNullOrEmpty(p)) return p;
+                }
+            }
+
+            // Mage (Staff)
+            if (!string.IsNullOrWhiteSpace(classKey) && classKey.IndexOf("mage", StringComparison.InvariantCultureIgnoreCase) >= 0)
+            {
+                string folder = ResolvePackFolder("staff") ?? ResolvePackFolder("magic");
+                if (!string.IsNullOrEmpty(folder))
+                {
+                    var map = new Dictionary<string,string[]>
+                    {
+                        ["Idle"] = new[]{"idle"},
+                        ["Walk"] = new[]{"walk"},
+                        ["Run"] = new[]{"run"},
+                        ["LightAttack"] = new[]{"cast","spell","shoot","light"},
+                        ["HeavyAttack"] = new[]{"cast","spell","heavy","charge"},
+                        ["Dodge"] = new[]{"dodge","roll"},
+                        ["Block"] = new[]{"block","guard"},
+                        ["HitReact"] = new[]{"hit","hurt"},
+                        ["Death"] = new[]{"die","death"},
+                        ["Jump"] = new[]{"jump"},
+                        ["Fall"] = new[]{"fall"},
+                        ["Land"] = new[]{"land"},
+                        ["Ability1"] = new[]{"cast","spell","a1"},
+                        ["Ability2"] = new[]{"cast","spell","a2"},
+                        ["Ability3"] = new[]{"cast","spell","a3"},
+                        ["Ultimate"] = new[]{"ultimate","channel","power"}
+                    };
+                    var p = CreatePresetWithFolder("Mage", "Mage_Staff", "Mage_Staff", folder, map);
+                    if (!string.IsNullOrEmpty(p)) return p;
+                }
+            }
+
+            // Rogue (Dual)
+            if (!string.IsNullOrWhiteSpace(classKey) && (classKey.IndexOf("rogue", StringComparison.InvariantCultureIgnoreCase) >= 0 || classKey.IndexOf("assassin", StringComparison.InvariantCultureIgnoreCase) >= 0))
+            {
+                string folder = ResolvePackFolder("dual") ?? ResolvePackFolder("dual", "dagger") ?? ResolvePackFolder("2", "weapon");
+                if (!string.IsNullOrEmpty(folder))
+                {
+                    var map = new Dictionary<string,string[]>
+                    {
+                        ["Idle"] = new[]{"idle"},
+                        ["Walk"] = new[]{"walk"},
+                        ["Run"] = new[]{"run"},
+                        ["LightAttack"] = new[]{"attack1","stab","slash","light"},
+                        ["HeavyAttack"] = new[]{"attack2","spin","heavy"},
+                        ["Dodge"] = new[]{"dodge","roll","evade"},
+                        ["Block"] = new[]{"block","guard"},
+                        ["HitReact"] = new[]{"hit","hurt"},
+                        ["Death"] = new[]{"die","death"},
+                        ["Jump"] = new[]{"jump"},
+                        ["Fall"] = new[]{"fall"},
+                        ["Land"] = new[]{"land"},
+                        ["Ability1"] = new[]{"attack3","combo"},
+                        ["Ability2"] = new[]{"attack4","flurry"},
+                        ["Ability3"] = new[]{"attack5","execute"},
+                        ["Ultimate"] = new[]{"ultimate","finisher"}
+                    };
+                    var p = CreatePresetWithFolder("Rogue", "Rogue_Dual", "Rogue_Dual", folder, map);
+                    if (!string.IsNullOrEmpty(p)) return p;
+                }
+            }
+
+            // Fallback to generic default preset
+            var fallback = BuildRpgPresetObject(classKey ?? "Default", null);
+            if (fallback == null) return null;
+            string r = GetAssistantPackageRoot(); string f = (r + "/AnimatorPresets").Replace('\\','/'); EnsureFolder(f);
+            string def = f + $"/RPG_{SanitizeFileName(classKey ?? "Default")}_Preset.asset";
+            AssetDatabase.CreateAsset(fallback, def); AssetDatabase.SaveAssets();
+            return def;
+        }
+
+        // Archer-specific preset that assigns bow clips from ExplosiveLLC folder; idempotent
+        private static string CreateArcherBowPresetAsset()
+        {
+            if (!AssetDatabase.IsValidFolder(BowFolder)) return null;
 
             string root = GetAssistantPackageRoot();
             string folder = (root + "/AnimatorPresets").Replace('\\', '/');
             EnsureFolder(folder);
-            string fileName = $"RPG_{SanitizeFileName(classKey ?? "Default")}_Preset.asset";
-            string path = folder + "/" + fileName;
-            AssetDatabase.CreateAsset(preset, path);
+            string path = folder + "/RPG_Archer_Preset.asset"; // stable name to avoid duplicates
+
+            var existing = AssetDatabase.LoadAssetAtPath<ScriptableObject>(path);
+            if (existing != null)
+            {
+                // Do not recreate; just reuse existing preset
+                return path;
+            }
+
+            var presetObj = BuildRpgPresetObject("Archer", "RPG_Archer");
+            if (presetObj == null) return null;
+
+            // Assign bow clips to states
+            var presetType = presetObj.GetType();
+            var stateDefType = presetType.Assembly.GetTypes().FirstOrDefault(x => x.Name == "StateDefinition");
+            var statesField = presetType.GetField("states", BindingFlags.Public | BindingFlags.Instance);
+            var statesObj = statesField?.GetValue(presetObj) as IEnumerable;
+            if (stateDefType != null && statesObj != null)
+            {
+                AnimationClip FindClip(params string[] tokens)
+                {
+                    AnimationClip best = null; int bestScore = int.MinValue;
+                    foreach (var guid in AssetDatabase.FindAssets("t:AnimationClip", new[] { BowFolder }))
+                    {
+                        var p = AssetDatabase.GUIDToAssetPath(guid);
+                        var clip = AssetDatabase.LoadAssetAtPath<AnimationClip>(p);
+                        if (clip == null) continue;
+                        var n = (clip.name ?? string.Empty).ToLowerInvariant();
+                        int score = 0; foreach (var t in tokens) { var tt = (t ?? string.Empty).ToLowerInvariant(); if (!string.IsNullOrEmpty(tt) && n.Contains(tt)) score += 10; }
+                        if (score > bestScore) { best = clip; bestScore = score; }
+                    }
+                    return best;
+                }
+
+                var map = new Dictionary<string, AnimationClip>(StringComparer.InvariantCultureIgnoreCase)
+                {
+                    ["Idle"] = FindClip("idle"),
+                    ["Walk"] = FindClip("walk"),
+                    ["Run"]  = FindClip("run-forward", "run"),
+                    ["LightAttack"] = FindClip("attack4", "shoot"),
+                    ["HeavyAttack"] = FindClip("attack5", "attack6", "charge", "aim"),
+                    ["Ability1"] = FindClip("attack4"),
+                    ["Ability2"] = FindClip("attack5"),
+                    ["Ability3"] = FindClip("attack6"),
+                    ["Ultimate"] = FindClip("boost1", "ultimate", "power"),
+                    ["Dodge"] = FindClip("dodge", "roll", "evade"),
+                    ["HitReact"] = FindClip("hit", "hurt", "impact"),
+                    ["Death"] = FindClip("die", "death"),
+                    ["Jump"] = FindClip("jump"),
+                    ["Fall"] = FindClip("fall"),
+                    ["Land"] = FindClip("land", "landing"),
+                };
+
+                foreach (var s in statesObj)
+                {
+                    if (s == null) continue;
+                    var name = stateDefType.GetField("name", BindingFlags.Public | BindingFlags.Instance)?.GetValue(s) as string;
+                    if (string.IsNullOrEmpty(name)) continue;
+                    if (map.TryGetValue(name, out var clip) && clip != null)
+                    {
+                        stateDefType.GetField("animationClip", BindingFlags.Public | BindingFlags.Instance)?.SetValue(s, clip);
+                    }
+                }
+            }
+
+            AssetDatabase.CreateAsset(presetObj, path);
             AssetDatabase.SaveAssets();
-            EditorGUIUtility.PingObject(preset);
-            Selection.activeObject = preset;
-            Debug.Log($"? Created AnimatorPreset for class '{classKey}' at {path}.");
+            EditorGUIUtility.PingObject(presetObj);
+            Selection.activeObject = presetObj;
+            Debug.Log($"Created Archer AnimatorPreset at {path}.");
             return path;
         }
 
@@ -271,7 +526,7 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor
             return name.Replace(' ', '_');
         }
 
-        [MenuItem("The Covenant Keepers/AI Game Assistant/Animator/Create Default RPG AnimatorPreset", priority = 50)]
+        // Removed MenuItem attributes: callable from Assistant Window only
         public static void CreateDefaultRpgPreset()
         {
             // Get the main preset type first
@@ -418,28 +673,7 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor
             }
         }
 
-        [MenuItem("The Covenant Keepers/AI Game Assistant/Animator/Create Preset For Selected Character Class", priority = 51)]
-        public static void CreatePresetForSelectedCharacter()
-        {
-            var so = Selection.activeObject as ScriptableObject;
-            if (so == null || so.GetType().Name != "CharacterData")
-            {
-                EditorUtility.DisplayDialog("Create Preset", "Select a CharacterData asset first.", "OK");
-                return;
-            }
-            var clsField = so.GetType().GetField("Class", BindingFlags.Public | BindingFlags.Instance);
-            var nameField = so.GetType().GetField("Name", BindingFlags.Public | BindingFlags.Instance);
-            var cls = (clsField?.GetValue(so) as string) ?? "Default";
-            var cname = (nameField?.GetValue(so) as string) ?? "Character";
-
-            // Auto-create without prompt into AnimatorPresets folder
-            var path = CreateRpgPresetForClassAuto(cls);
-            if (!string.IsNullOrEmpty(path))
-                Debug.Log($"Preset created for '{cname}'. Set characterClassKey to '{cls}' if needed.");
-        }
-
         // NEW: Auto-fill AnimationClips into a preset using discovered clips
-        [MenuItem("The Covenant Keepers/AI Game Assistant/Animator/Auto-Fill Clips In Selected Preset", priority = 52)]
         public static void AutoFillClipsInSelectedPreset()
         {
             var presetType = T("AnimatorPreset");
@@ -556,6 +790,69 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor
             AssetDatabase.Refresh();
             EditorGUIUtility.PingObject(targetPreset);
             Debug.Log($"? Auto-fill complete: set {filled}/{total} state clips on preset '{targetPreset.name}'.");
+        }
+
+        // Generic creator: build preset for classKey from a specific animations folder and a state->token map
+        private static string CreatePresetWithFolder(string classKey, string fileSafeKey, string displayName, string folderPath, Dictionary<string, string[]> tokenMap)
+        {
+            if (string.IsNullOrEmpty(folderPath) || !AssetDatabase.IsValidFolder(folderPath)) return null;
+
+            string root = GetAssistantPackageRoot();
+            string presetsFolder = (root + "/AnimatorPresets").Replace('\\','/');
+            EnsureFolder(presetsFolder);
+            string path = presetsFolder + $"/RPG_{fileSafeKey}_Preset.asset";
+
+            // Idempotent: reuse existing asset if present
+            if (AssetDatabase.LoadAssetAtPath<ScriptableObject>(path) != null)
+                return path;
+
+            var presetObj = BuildRpgPresetObject(classKey, $"RPG_{displayName}");
+            if (presetObj == null) return null;
+
+            // Assign clips per token map using only the specified folder
+            var presetType = presetObj.GetType();
+            var stateDefType = presetType.Assembly.GetTypes().FirstOrDefault(x => x.Name == "StateDefinition");
+            var statesField = presetType.GetField("states", BindingFlags.Public | BindingFlags.Instance);
+            var statesObj = statesField?.GetValue(presetObj) as IEnumerable;
+            if (stateDefType != null && statesObj != null && tokenMap != null)
+            {
+                AnimationClip FindClip(params string[] tokens)
+                {
+                    AnimationClip best = null; int bestScore = int.MinValue;
+                    foreach (var guid in AssetDatabase.FindAssets("t:AnimationClip", new[] { folderPath }))
+                    {
+                        var p = AssetDatabase.GUIDToAssetPath(guid);
+                        var clip = AssetDatabase.LoadAssetAtPath<AnimationClip>(p);
+                        if (clip == null) continue;
+                        var n = (clip.name ?? string.Empty).ToLowerInvariant();
+                        int score = 0;
+                        foreach (var t in tokens ?? Array.Empty<string>())
+                        {
+                            var tt = (t ?? string.Empty).ToLowerInvariant();
+                            if (!string.IsNullOrEmpty(tt) && n.Contains(tt)) score += 10;
+                        }
+                        if (score > bestScore) { best = clip; bestScore = score; }
+                    }
+                    return best;
+                }
+
+                foreach (var s in statesObj)
+                {
+                    if (s == null) continue;
+                    var name = stateDefType.GetField("name", BindingFlags.Public | BindingFlags.Instance)?.GetValue(s) as string;
+                    if (string.IsNullOrEmpty(name)) continue;
+                    if (tokenMap.TryGetValue(name, out var tokens))
+                    {
+                        var clip = FindClip(tokens);
+                        if (clip != null)
+                            stateDefType.GetField("animationClip", BindingFlags.Public | BindingFlags.Instance)?.SetValue(s, clip);
+                    }
+                }
+            }
+
+            AssetDatabase.CreateAsset(presetObj, path);
+            AssetDatabase.SaveAssets();
+            return path;
         }
     }
 }

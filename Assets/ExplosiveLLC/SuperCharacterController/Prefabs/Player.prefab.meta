@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 0241e293f88c9ba4683c927a85520fed
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 63772
+  packageName: RPG Character Mecanim Animation Pack
+  packageVersion: 7.2.1
+  assetPath: Assets/ExplosiveLLC/SuperCharacterController/Prefabs/Player.prefab
+  uploadId: 788702

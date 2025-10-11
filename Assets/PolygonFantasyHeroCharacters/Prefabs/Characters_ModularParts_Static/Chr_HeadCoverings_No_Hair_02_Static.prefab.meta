@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: f78829ec3da690848b6fa45dbe3b1667
+timeCreated: 1556687480
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 143468
+  packageName: POLYGON Modular Fantasy Hero Characters - Low Poly 3D Art by Synty
+  packageVersion: 1.3.2
+  assetPath: Assets/PolygonFantasyHeroCharacters/Prefabs/Characters_ModularParts_Static/Chr_HeadCoverings_No_Hair_02_Static.prefab
+  uploadId: 756033

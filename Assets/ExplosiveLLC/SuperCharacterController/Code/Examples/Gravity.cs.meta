@@ -1,0 +1,19 @@
+fileFormatVersion: 2
+guid: 94bba39df9f503940913a5dbc45d6fc2
+timeCreated: 1431992376
+licenseType: Store
+MonoImporter:
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 63772
+  packageName: RPG Character Mecanim Animation Pack
+  packageVersion: 7.2.1
+  assetPath: Assets/ExplosiveLLC/SuperCharacterController/Code/Examples/Gravity.cs
+  uploadId: 788702

@@ -10,7 +10,7 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor
 {
     public static class AnimatorClipAssigner
     {
-        [MenuItem(TheCovenantKeepers.AI_Game_Assistant.Editor.TckMenu.Animator + "/Assign Clips From Selected Folder -> Selected Controller")]
+        //[MenuItem(TheCovenantKeepers.AI_Game_Assistant.Editor.TckMenu.Animator + "/Assign Clips From Selected Folder -> Selected Controller")]
         public static void AssignFromSelectedFolderToSelectedController()
         {
             // Folder
@@ -40,7 +40,7 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor
             EditorUtility.DisplayDialog("Assign Clips", $"Assigned {totalAssigned} state clip(s) from\n{folder}", "OK");
         }
 
-        [MenuItem(TheCovenantKeepers.AI_Game_Assistant.Editor.TckMenu.Animator + "/Assign Clips From Folder... -> Selected Controller")]
+        //[MenuItem(TheCovenantKeepers.AI_Game_Assistant.Editor.TckMenu.Animator + "/Assign Clips From Folder... -> Selected Controller")]
         public static void AssignFromFolderPrompt()
         {
             string start = Application.dataPath;

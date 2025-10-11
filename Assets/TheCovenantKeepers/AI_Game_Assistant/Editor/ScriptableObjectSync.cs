@@ -23,7 +23,7 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor
         private const string ChatGPTSettingsTypeName = "TheCovenantKeepers.AI_Game_Assistant.ChatGPTSettings";
         private const string AssistantPathsTypeName = "TheCovenantKeepers.AI_Game_Assistant.AssistantPaths";
 
-        [MenuItem(TheCovenantKeepers.AI_Game_Assistant.Editor.TckMenu.Data + "/Sync Character ScriptableObjects", priority = 50)]
+        //[MenuItem(TheCovenantKeepers.AI_Game_Assistant.Editor.TckMenu.Data + "/Sync Character ScriptableObjects", priority = 50)]
         public static void MenuSyncCharacters()
         {
             if (!TryGetStaticStringMember(AssistantPathsTypeName, "GeneratedCharacterCsv", out string csv))

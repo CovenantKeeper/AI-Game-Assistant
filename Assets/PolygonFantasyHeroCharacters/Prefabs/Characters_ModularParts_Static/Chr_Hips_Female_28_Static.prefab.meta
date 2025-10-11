@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: efde6f73bd43e294ca5301f3a1eeb645
+timeCreated: 1556687365
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 143468
+  packageName: POLYGON Modular Fantasy Hero Characters - Low Poly 3D Art by Synty
+  packageVersion: 1.3.2
+  assetPath: Assets/PolygonFantasyHeroCharacters/Prefabs/Characters_ModularParts_Static/Chr_Hips_Female_28_Static.prefab
+  uploadId: 756033

@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 1aa4231d1cda0634f9580d9fe87a146e
+timeCreated: 1556687446
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 143468
+  packageName: POLYGON Modular Fantasy Hero Characters - Low Poly 3D Art by Synty
+  packageVersion: 1.3.2
+  assetPath: Assets/PolygonFantasyHeroCharacters/Prefabs/Characters_ModularParts_Static/Chr_Head_Male_03_Static.prefab
+  uploadId: 756033

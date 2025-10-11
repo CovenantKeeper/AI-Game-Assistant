@@ -9,7 +9,7 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor
     {
         private const string Root = "Assets/TheCovenantKeepers/AI_Game_Assistant/Blueprints/Effects";
 
-        [MenuItem(TheCovenantKeepers.AI_Game_Assistant.Editor.TckMenu.Effects + "/Create Effect ScriptableObject", priority = 300)]
+        //[MenuItem(TheCovenantKeepers.AI_Game_Assistant.Editor.TckMenu.Effects + "/Create Effect ScriptableObject", priority = 300)]
         public static void CreateEffectAsset()
         {
             AssistantPaths.EnsureFolder(Root);
@@ -22,7 +22,7 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor
             Selection.activeObject = asset;
         }
 
-        [MenuItem(TheCovenantKeepers.AI_Game_Assistant.Editor.TckMenu.Effects + "/Create Simple Spark VFX Prefab", priority = 301)]
+        //[MenuItem(TheCovenantKeepers.AI_Game_Assistant.Editor.TckMenu.Effects + "/Create Simple Spark VFX Prefab", priority = 301)]
         public static void CreateSparkPrefab()
         {
             AssistantPaths.EnsureFolder(Root);
@@ -41,7 +41,7 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor
             Selection.activeObject = prefab;
         }
 
-        [MenuItem(TheCovenantKeepers.AI_Game_Assistant.Editor.TckMenu.Effects + "/Create Simple Hit Puff VFX Prefab", priority = 302)]
+        //[MenuItem(TheCovenantKeepers.AI_Game_Assistant.Editor.TckMenu.Effects + "/Create Simple Hit Puff VFX Prefab", priority = 302)]
         public static void CreateHitPuffPrefab()
         {
             AssistantPaths.EnsureFolder(Root);
@@ -63,7 +63,7 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor
             Selection.activeObject = prefab;
         }
 
-        [MenuItem(TheCovenantKeepers.AI_Game_Assistant.Editor.TckMenu.Effects + "/Create AbilityEffect + Sample VFX Pair", priority = 303)]
+        //[MenuItem(TheCovenantKeepers.AI_Game_Assistant.Editor.TckMenu.Effects + "/Create AbilityEffect + Sample VFX Pair", priority = 303)]
         public static void CreateEffectWithVfxPair()
         {
             // Create cast & hit VFX

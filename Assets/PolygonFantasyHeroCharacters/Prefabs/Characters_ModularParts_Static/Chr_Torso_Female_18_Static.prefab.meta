@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: efff9594d6e42aa4484392aa818256f9
+timeCreated: 1556687459
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 143468
+  packageName: POLYGON Modular Fantasy Hero Characters - Low Poly 3D Art by Synty
+  packageVersion: 1.3.2
+  assetPath: Assets/PolygonFantasyHeroCharacters/Prefabs/Characters_ModularParts_Static/Chr_Torso_Female_18_Static.prefab
+  uploadId: 756033

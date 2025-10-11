@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 80f5e8f7a460b564db8e963acfdbbfd2
+MonoImporter:
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 63772
+  packageName: RPG Character Mecanim Animation Pack
+  packageVersion: 7.2.1
+  assetPath: Assets/ExplosiveLLC/SuperCharacterController/Code/Math3d.cs
+  uploadId: 788702

@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 69f0e63ebb20f4a40a768010eff6f691
+timeCreated: 1556687420
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 143468
+  packageName: POLYGON Modular Fantasy Hero Characters - Low Poly 3D Art by Synty
+  packageVersion: 1.3.2
+  assetPath: Assets/PolygonFantasyHeroCharacters/Prefabs/Characters_ModularParts_Static/Chr_ShoulderAttachLeft_01_Static.prefab
+  uploadId: 756033

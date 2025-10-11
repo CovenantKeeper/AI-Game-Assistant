@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 6271a62f4bbd49641a54f55a64209956
+timeCreated: 1426812167
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 63772
+  packageName: RPG Character Mecanim Animation Pack
+  packageVersion: 7.2.1
+  assetPath: Assets/ExplosiveLLC/SuperCharacterController/Materials/OrangeWall.mat
+  uploadId: 788702

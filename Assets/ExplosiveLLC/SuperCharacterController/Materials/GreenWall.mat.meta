@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 8b951fc921bcb3341bdbb810abc1bd2c
+timeCreated: 1431139117
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 63772
+  packageName: RPG Character Mecanim Animation Pack
+  packageVersion: 7.2.1
+  assetPath: Assets/ExplosiveLLC/SuperCharacterController/Materials/GreenWall.mat
+  uploadId: 788702

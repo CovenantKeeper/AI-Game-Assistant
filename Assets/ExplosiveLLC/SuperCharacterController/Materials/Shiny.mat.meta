@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 0ed2a735a8e55a04fb0d00a4317a2440
+timeCreated: 1427149165
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 63772
+  packageName: RPG Character Mecanim Animation Pack
+  packageVersion: 7.2.1
+  assetPath: Assets/ExplosiveLLC/SuperCharacterController/Materials/Shiny.mat
+  uploadId: 788702

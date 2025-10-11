@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 6c7d9be4257142e42b700ad0f2926909
+timeCreated: 1556687538
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 143468
+  packageName: POLYGON Modular Fantasy Hero Characters - Low Poly 3D Art by Synty
+  packageVersion: 1.3.2
+  assetPath: Assets/PolygonFantasyHeroCharacters/Prefabs/Characters_ModularParts_Static/Chr_HandRight_Male_13_Static.prefab
+  uploadId: 756033

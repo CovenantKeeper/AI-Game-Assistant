@@ -1,19 +1,65 @@
-﻿using UnityEditor;
-using UnityEngine;
-using UnityEngine.UIElements;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
-using System.Threading.Tasks;
 using System.Linq;
-using UnityEditor.UIElements;
 using System.Reflection;
+using System.Threading.Tasks;
+using UObject = UnityEngine.Object;
+using UnityEditor;
 using UnityEditor.Animations;
 using UnityEditor.SceneManagement;
+using UnityEditor.Experimental.SceneManagement;
+using UnityEditor.UIElements;
+using UnityEngine;
+using UnityEngine.UIElements;
 
 namespace TheCovenantKeepers.AI_Game_Assistant.Editor.UI
 {
+    // Add this ABOVE the AssistantWindow class, but inside the namespace
+    public enum MasterlistType
+    {
+        Character = 0,
+        Item = 1,
+        Ability = 2,
+        Quest = 3,
+        Location = 4,
+        Beast = 5,
+        Spirit = 6
+    }
+
+
     public class AssistantWindow : EditorWindow
     {
+
+        // Animation Lab state
+        // Animation Lab: auto-sync option
+        private Label _animLastSyncedLabel;
+        private bool _animAutoSyncFromCharacterData = true;
+        private ScriptableObject _animTemplatePreset;
+        private string _animPresetFolder = "Assets/TheCovenantKeepers/AI_Game_Assistant/AnimatorPresets";
+        private string _animControllerFolder = "Assets/TheCovenantKeepers/AI_Game_Assistant/AnimatorControllers";
+        private bool _animSkipExisting = true, _animClearBeforeFill = true, _animAutofillExisting = true, _animOverwriteExisting = false;
+
+        // UI refs (optional)
+        private ObjectField _animTemplateField, _animPreviewClipField, _animCharacterSOField;
+        private TextField _animClassesCsv, _animName, _animClassKey, _animModelPath;
+        private ObjectField _animModelPrefabField;
+
+        // Tabs & Panels
+        private VisualElement _tabBar;
+        // Tabs & Panels (safe placeholders)
+        private UnityEngine.UIElements.VisualElement _panelMasterlists;
+        private UnityEngine.UIElements.VisualElement _panelAnimationLab;
+        private UnityEngine.UIElements.VisualElement _panelEffects;
+        private UnityEngine.UIElements.VisualElement _panelScripts;
+
+        // Preview
+        private UnityEditor.Editor _previewEditor;
+        private GameObject _previewInstance;
+        private UnityEditor.PreviewRenderUtility _preview;
+        private UnityEngine.Vector2 _previewDrag;
+        private bool _clearClipsBeforeAutofill = true; // default ON
         private EnumField masterListTypeField;
         private EnumField providerField;
         private VisualElement contentArea; // fallback only
@@ -21,6 +67,20 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor.UI
         private VisualElement contentBottom;
         private Label statusLabel;
         private Button openCsvButton;
+        // --- Animation Lab Preview state ---
+        private PreviewRenderUtility _previewUtil;
+        private GameObject _previewGO;
+        private Light _previewLight;
+        private Image _previewImage;
+        private RenderTexture _previewRT;
+
+        private AnimationClip _currentClip;
+        private double _clipStartTime;
+        private bool _isPlayingClip;
+
+
+        // Typed-list options
+        private bool _skipExistingPresets = true; // default ON
 
         // Store loaded characters
         private List<CharacterData> characters;
@@ -34,7 +94,9 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor.UI
         private const string PrefKeyProvider = "TCK_AI_Provider";
         private const string PrefKeyPrompt = "TCK_AI_LastPrompt";
 
-        [MenuItem(TheCovenantKeepers.AI_Game_Assistant.Editor.TckMenu.Root + "/Assistant Window", priority = 0)]
+
+
+        //[MenuItem(TheCovenantKeepers.AI_Game_Assistant.Editor.TckMenu.Root + "/Assistant Window", priority = 0)]
         public static void ShowWindow() => GetWindow<AssistantWindow>("AI Game Assistant");
 
         private void CreateGUI()
@@ -46,215 +108,53 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor.UI
 #endif
             var visualTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(AssistantPaths.AssistantUxml);
             var root = rootVisualElement;
-
-            Button generateButton = null;
-
-            // We'll remember promptHost to anchor our sidebar Effects tools there
-            VisualElement promptHost = null;
+            root.Clear();
 
             if (visualTree != null)
             {
                 visualTree.CloneTree(root);
-
                 var styleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>(AssistantPaths.AssistantUss);
                 if (styleSheet != null) root.styleSheets.Add(styleSheet);
-
-                masterListTypeField = root.Q<EnumField>("masterlist-type-field");
-                providerField = root.Q<EnumField>("provider-field");
-                // new content targets
-                contentTop = root.Q<VisualElement>("content-top");
-                contentBottom = root.Q<VisualElement>("content-bottom");
-                contentArea = root.Q<VisualElement>("content-area"); // may be null in new layout
-
-                // Build a single scrollable TextField in the host
-                promptHost = root.Q<VisualElement>("ai-prompt-host");
-                if (promptHost != null)
-                {
-                    promptHost.Clear();
-                    var sv = new ScrollView(ScrollViewMode.Vertical);
-                    sv.style.height = 240;
-                    sv.style.flexGrow = 0;
-                    sv.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
-                    var tf = new TextField { multiline = true };
-                    tf.name = "ai-prompt-field-runtime";
-                    tf.style.whiteSpace = WhiteSpace.Normal;
-                    tf.style.flexGrow = 1;
-                    tf.style.minHeight = 220;
-                    tf.value = EditorPrefs.GetString(PrefKeyPrompt, string.Empty);
-                    promptBuffer = tf.value;
-                    tf.RegisterValueChangedCallback(e =>
-                    {
-                        promptBuffer = e.newValue ?? string.Empty;
-                        EditorPrefs.SetString(PrefKeyPrompt, promptBuffer);
-                    });
-                    sv.Add(tf);
-                    promptHost.Add(sv);
-                }
-
-                generateButton = root.Q<Button>("generate-button");
-
-                // optional status label bottom area
-                statusLabel = new Label() { name = "status-label" };
-                (contentBottom ?? root).Add(statusLabel);
-
-                // NEW: Animator tools row (bottom utility row)
-                var animatorToolsRow = new VisualElement { name = "animator-tools-row" };
-                animatorToolsRow.style.flexDirection = FlexDirection.Row;
-                animatorToolsRow.style.marginTop = 4;
-                animatorToolsRow.style.flexWrap = Wrap.Wrap; // allow wrapping to avoid clipping
-
-                var createPresetBtn = new Button() { text = "Create RPG AnimatorPreset" };
-                createPresetBtn.tooltip = "Creates a default RPG AnimatorPreset (Idle/Walk/Run/Jump/Attacks/etc.).";
-                createPresetBtn.clicked += () =>
-                {
-                    // Call the template creator directly
-                    TheCovenantKeepers.AI_Game_Assistant.Editor.AnimatorPresetTemplates.CreateDefaultRpgPreset();
-                };
-                animatorToolsRow.Add(createPresetBtn);
-
-                (contentBottom ?? root).Add(animatorToolsRow);
-
-                // NEW: Effects tools sidebar group (visible in left column under CSV/Prompt)
-                var effectsGroup = BuildEffectsSidebarGroup();
-                bool placedInSidebar = false;
-                if (promptHost != null && promptHost.parent != null)
-                {
-                    // Add a titled box under the same parent as promptHost for visibility
-                    var leftColumn = promptHost.parent;
-                    leftColumn.Add(effectsGroup);
-                    placedInSidebar = true;
-                }
-                if (!placedInSidebar)
-                {
-                    // Fallback to bottom row if layout doesn't expose a sidebar
-                    (contentBottom ?? root).Add(effectsGroup);
-                }
             }
 
-            // Fallbacks
-            if (masterListTypeField == null)
-            {
-                masterListTypeField = new EnumField("Masterlist Type", MasterlistType.Character);
-                root.Add(masterListTypeField);
-            }
-            if (providerField == null)
-            {
-                providerField = new EnumField("AI Provider", AIProvider.ChatGPT);
-                root.Add(providerField);
-            }
-            if (contentTop == null && contentArea == null)
-            {
-                contentArea = new VisualElement { name = "content-area" };
-                contentArea.style.flexGrow = 1;
-                contentArea.style.marginTop = 6;
-                root.Add(contentArea);
-            }
-            if (generateButton == null)
-            {
-                generateButton = new Button() { text = "Generate New List" };
-                root.Add(generateButton);
-            }
-            if (statusLabel == null)
-            {
-                statusLabel = new Label() { name = "status-label" };
-                statusLabel.style.marginTop = 4;
-                (contentBottom ?? root).Add(statusLabel);
-            }
-            if (openCsvButton == null)
-            {
-                openCsvButton = new Button() { text = "Open CSV" };
-                openCsvButton.clicked += () =>
-                {
-                    var type = (MasterlistType)(masterListTypeField?.value ?? MasterlistType.Character);
-                    var path = GetSavePath(type);
-                    if (File.Exists(path)) EditorUtility.RevealInFinder(path);
-                    else EditorUtility.DisplayDialog("Not Found", $"No CSV at\n{path}", "OK");
-                };
-                (contentBottom ?? root).Add(openCsvButton);
-            }
+            // In tabbed layout we don't use legacy hosts; ensure they are null
+            masterListTypeField = null;
+            providerField = null;
+            contentArea = null;
+            contentTop = null;
+            contentBottom = null;
+            statusLabel = null;
+            openCsvButton = null;
 
-            // Add default prompt tools
-            var promptToolsRow = new VisualElement { name = "prompt-tools-row" };
-            promptToolsRow.style.flexDirection = FlexDirection.Row;
-            promptToolsRow.style.marginTop = 4;
-            promptToolsRow.style.flexWrap = Wrap.Wrap; // allow wrapping
+            // Hosts from new UXML (fallback to root if not present)
+            var tabHost = root.Q<VisualElement>("tabbar-host");
+            var panelsRoot = root.Q<VisualElement>("panels-root") ?? root;
 
-            var useDefaultPromptBtn = new Button() { text = "Use Default Prompt" };
-            useDefaultPromptBtn.clicked += () =>
-            {
-                var t = (MasterlistType)(masterListTypeField?.value ?? MasterlistType.Character);
-                promptBuffer = GetDefaultPromptForType(t);
-                EditorPrefs.SetString(PrefKeyPrompt, promptBuffer);
-                var runtimeTf = root.Q<TextField>("ai-prompt-field-runtime");
-                if (runtimeTf != null) runtimeTf.value = promptBuffer;
-            };
-            promptToolsRow.Add(useDefaultPromptBtn);
+            // === Panels (one per tab) ===
+            _panelMasterlists = new ScrollView() { style = { flexGrow = 1 } };
+            _panelAnimationLab = new ScrollView() { style = { flexGrow = 1 } };
+            _panelEffects     = new ScrollView() { style = { flexGrow = 1 } };
+            _panelScripts     = new ScrollView() { style = { flexGrow = 1 } };
 
-            var clearPromptBtn = new Button() { text = "Clear" };
-            clearPromptBtn.clicked += () =>
-            {
-                promptBuffer = string.Empty;
-                EditorPrefs.SetString(PrefKeyPrompt, promptBuffer);
-                var runtimeTf = root.Q<TextField>("ai-prompt-field-runtime");
-                if (runtimeTf != null) runtimeTf.value = promptBuffer;
-            };
-            promptToolsRow.Add(clearPromptBtn);
+            // Mount panels
+            panelsRoot.Add(_panelMasterlists);
+            panelsRoot.Add(_panelAnimationLab);
+            panelsRoot.Add(_panelEffects);
+            panelsRoot.Add(_panelScripts);
 
-            (contentBottom ?? root).Add(promptToolsRow);
+            // Fill panels (content is created INSIDE each panel only)
+            _panelMasterlists.Add(BuildMasterlistControlsGroup()); // Contains prompt/type/provider/generate/etc
+            _panelAnimationLab.Add(BuildAnimationLabPanel());      // Animation-only UI
+            _panelEffects.Add(BuildEffectsSidebarGroup());         // Effects-only UI
+            _panelScripts.Add(BuildScriptPanel());                 // Scripts-only UI
 
-            // Init dropdowns
-            var savedType = (MasterlistType)EditorPrefs.GetInt(PrefKeyType, (int)MasterlistType.Character);
-            masterListTypeField.Init(savedType);
-            masterListTypeField.value = savedType;
-            masterListTypeField.RegisterValueChangedCallback(evt =>
-            {
-                var t = (MasterlistType)evt.newValue;
-                EditorPrefs.SetInt(PrefKeyType, (int)t);
-                ShowSection(t);
-            });
+            // Build tab bar and mount it
+            _tabBar = BuildTabBar();
+            if (tabHost != null) tabHost.Add(_tabBar);
+            else root.Insert(0, _tabBar);
 
-            var savedProvider = (AIProvider)EditorPrefs.GetInt(PrefKeyProvider, (int)AIProvider.ChatGPT);
-            providerField.Init(savedProvider);
-            providerField.value = savedProvider;
-            providerField.RegisterValueChangedCallback(evt =>
-            {
-                var p = (AIProvider)evt.newValue;
-                EditorPrefs.SetInt(PrefKeyProvider, (int)p);
-            });
-
-            generateButton.clicked += async () =>
-            {
-                EditorPrefs.SetString(PrefKeyPrompt, promptBuffer ?? string.Empty);
-
-                generateButton.SetEnabled(false);
-                statusLabel.text = "Generating...";
-                try
-                {
-                    var type = (MasterlistType)(masterListTypeField?.value ?? MasterlistType.Character);
-                    var providerEnum = providerField?.value is AIProvider p ? p : AIProvider.ChatGPT;
-                    var prompt = promptBuffer ?? string.Empty;
-
-                    string savePath = GetSavePath(type);
-                    await GenerateCsvAsync(type, prompt, savePath, providerEnum);
-#if UNITY_EDITOR
-                    AssetDatabase.ImportAsset(savePath);
-                    AssetDatabase.Refresh();
-#endif
-                    ShowSection(type);
-                    statusLabel.text = $"Saved: {savePath}";
-                }
-                catch (System.Exception ex)
-                {
-                    Debug.LogError($"CSV generation failed: {ex.Message}");
-                    statusLabel.text = "Error: see Console";
-                }
-                finally
-                {
-                    generateButton.SetEnabled(true);
-                }
-            };
-
-            ShowSection(savedType);
+            // Show default tab
+            ShowPanel(_panelMasterlists);
         }
 
         // Builds a titled group with the Effects/Spawner tools
@@ -380,6 +280,440 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor.UI
             }
         }
 
+        // Show only the active panel
+        private void ShowPanel(VisualElement active)
+        {
+            if (_panelMasterlists != null) _panelMasterlists.style.display = DisplayStyle.None;
+            if (_panelAnimationLab != null) _panelAnimationLab.style.display = DisplayStyle.None;
+            if (_panelEffects != null) _panelEffects.style.display = DisplayStyle.None;
+            if (_panelScripts != null) _panelScripts.style.display = DisplayStyle.None;
+
+            if (active != null) active.style.display = DisplayStyle.Flex;
+        }
+
+        // Simple tab bar
+        private VisualElement BuildTabBar()
+        {
+            var bar = new VisualElement { name = "tckai-tabbar" };
+            bar.style.flexDirection = FlexDirection.Row;
+            bar.style.marginBottom = 6;
+
+            VisualElement AddTab(string title, VisualElement panel)
+            {
+                var b = new Button(() => ShowPanel(panel)) { text = title };
+                b.style.marginRight = 4;
+                bar.Add(b);
+                return b;
+            }
+
+            AddTab("Masterlists", _panelMasterlists);
+            AddTab("Animation", _panelAnimationLab);
+            AddTab("Effects", _panelEffects);
+            AddTab("Scripts", _panelScripts);
+            return bar;
+        }
+
+        // Effects: add spawner on current selection
+        private static void AddAbilitySpawnerToSelection()
+        {
+            var go = Selection.activeGameObject;
+            if (go == null)
+            {
+                EditorUtility.DisplayDialog("Add Spawner", "Select a GameObject in the scene or a prefab instance.", "OK");
+                return;
+            }
+
+            var spawner = go.GetComponent<TheCovenantKeepers.AI_Game_Assistant.AbilityEffectSpawner>();
+            if (spawner == null) spawner = go.AddComponent<TheCovenantKeepers.AI_Game_Assistant.AbilityEffectSpawner>();
+
+            var t = go.transform.Find("VFX_Spawn");
+            if (t == null)
+            {
+                var marker = new GameObject("VFX_Spawn");
+                marker.transform.SetParent(go.transform, false);
+                marker.transform.localPosition = new Vector3(0f, 0.15f, 0.2f);
+                t = marker.transform;
+            }
+            spawner.spawn = t;
+
+            EditorUtility.SetDirty(go);
+            EditorGUIUtility.PingObject(go);
+            Debug.Log("✅ AbilityEffectSpawner added/updated on selection.");
+        }
+
+        // Masterlists panel (prompt/type/provider + content placeholders)
+        private VisualElement BuildMasterlistControlsGroup()
+        {
+            var panel = new VisualElement { name = "masterlists-panel-root" };
+
+            // Controls group
+            var controls = new VisualElement(); controls.AddToClassList("group-box");
+            {
+                var hdr = new Label("Masterlist Controls"); hdr.AddToClassList("group-header"); controls.Add(hdr);
+
+                // Masterlist type
+                var savedType = (MasterlistType)EditorPrefs.GetInt(PrefKeyType, (int)MasterlistType.Character);
+                masterListTypeField = new EnumField("Masterlist Type", savedType);
+                masterListTypeField.RegisterValueChangedCallback(evt =>
+                {
+                    var t = (MasterlistType)evt.newValue;
+                    EditorPrefs.SetInt(PrefKeyType, (int)t);
+                    ShowSection(t);
+                });
+                controls.Add(masterListTypeField);
+
+                // Provider
+                var savedProv = (AIProvider)EditorPrefs.GetInt(PrefKeyProvider, (int)AIProvider.ChatGPT);
+                providerField = new EnumField("AI Provider", savedProv);
+                providerField.RegisterValueChangedCallback(evt =>
+                {
+                    var p = (AIProvider)evt.newValue;
+                    EditorPrefs.SetInt(PrefKeyProvider, (int)p);
+                });
+                controls.Add(providerField);
+
+                // Prompt
+                controls.Add(new Label("Prompt"));
+                var promptField = new TextField { multiline = true };
+                promptField.style.minHeight = 120;
+                promptField.value = EditorPrefs.GetString(PrefKeyPrompt, string.Empty);
+                promptBuffer = promptField.value;
+                promptField.RegisterValueChangedCallback(e =>
+                {
+                    promptBuffer = e.newValue ?? string.Empty;
+                    EditorPrefs.SetString(PrefKeyPrompt, promptBuffer);
+                });
+                controls.Add(promptField);
+
+                // Actions row
+                var row = new VisualElement { style = { flexDirection = FlexDirection.Row, flexWrap = Wrap.Wrap, marginTop = 4 } };
+
+                var btnGenerate = new Button(async () =>
+                {
+                    var type = (MasterlistType)(masterListTypeField?.value ?? MasterlistType.Character);
+                    var providerEnum = providerField?.value is AIProvider p ? p : AIProvider.ChatGPT;
+                    var prompt = promptBuffer ?? string.Empty;
+
+                    if (statusLabel != null) statusLabel.text = "Generating...";
+                    try
+                    {
+                        var savePath = GetSavePath(type);
+                        await GenerateCsvAsync(type, prompt, savePath, providerEnum);
+#if UNITY_EDITOR
+                        AssetDatabase.ImportAsset(savePath);
+                        AssetDatabase.Refresh();
+#endif
+                        ShowSection(type);
+                        if (statusLabel != null) statusLabel.text = $"Saved: {savePath}";
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.LogError($"CSV generation failed: {ex.Message}");
+                        if (statusLabel != null) statusLabel.text = "Error: see Console";
+                    }
+                })
+                { text = "Generate New List" };
+                row.Add(btnGenerate);
+
+                var btnOpenCsv = new Button(() =>
+                {
+                    var type = (MasterlistType)(masterListTypeField?.value ?? MasterlistType.Character);
+                    var path = GetSavePath(type);
+                    if (File.Exists(path)) EditorUtility.RevealInFinder(path);
+                    else EditorUtility.DisplayDialog("Not Found", $"No CSV at\n{path}", "OK");
+                })
+                { text = "Open CSV" };
+                row.Add(btnOpenCsv);
+
+                var btnDefault = new Button(() =>
+                {
+                    var t = (MasterlistType)(masterListTypeField?.value ?? MasterlistType.Character);
+                    promptBuffer = GetDefaultPromptForType(t);
+                    EditorPrefs.SetString(PrefKeyPrompt, promptBuffer);
+                    // Update visible prompt
+                    var fields = controls.Query<TextField>().ToList();
+                    var tf = fields.LastOrDefault();
+                    if (tf != null) tf.value = promptBuffer;
+                }) { text = "Use Default Prompt" };
+                row.Add(btnDefault);
+
+                var btnClear = new Button(() =>
+                {
+                    promptBuffer = string.Empty;
+                    EditorPrefs.SetString(PrefKeyPrompt, promptBuffer);
+                    var fields = controls.Query<TextField>().ToList();
+                    var tf = fields.LastOrDefault();
+                    if (tf != null) tf.value = string.Empty;
+                }) { text = "Clear" };
+                row.Add(btnClear);
+
+                controls.Add(row);
+            }
+            panel.Add(controls);
+
+            // Status
+            statusLabel = new Label() { name = "status-label" };
+            statusLabel.style.marginTop = 4;
+            panel.Add(statusLabel);
+
+            // Content areas used by ShowSection/DrawCharacterListForPath
+            contentTop = new VisualElement { name = "content-top" };
+            contentBottom = new VisualElement { name = "content-bottom" };
+            panel.Add(contentTop);
+            panel.Add(contentBottom);
+
+            // Initial draw
+            var tSaved = (MasterlistType)EditorPrefs.GetInt(PrefKeyType, (int)MasterlistType.Character);
+            masterListTypeField.value = tSaved;
+            providerField.value = (AIProvider)EditorPrefs.GetInt(PrefKeyProvider, (int)AIProvider.ChatGPT);
+            ShowSection(tSaved);
+
+            return panel;
+        }
+
+        // Minimal Animation tab (tidied)
+        private VisualElement BuildAnimationLabPanel()
+        {
+            var root = new ScrollView();
+
+            // ==== Setup ====
+            var gSetup = new GroupBox { text = "Setup" };
+            {
+                var row1 = new VisualElement { style = { flexDirection = FlexDirection.Row } };
+                row1.Add(new Label("Template Preset:"));
+                _animTemplateField = new ObjectField
+                {
+                    objectType = typeof(ScriptableObject),
+                    allowSceneObjects = false,
+                    value = _animTemplatePreset
+                };
+                _animTemplateField.RegisterValueChangedCallback(e => _animTemplatePreset = e.newValue as ScriptableObject);
+                row1.Add(_animTemplateField);
+                gSetup.Add(row1);
+
+                var row2 = new VisualElement { style = { flexDirection = FlexDirection.Row } };
+                var presetPath = new TextField("Preset Folder") { value = _animPresetFolder };
+                presetPath.RegisterValueChangedCallback(e => _animPresetFolder = e.newValue);
+                var ctrlPath = new TextField("Controller Folder") { value = _animControllerFolder };
+                ctrlPath.RegisterValueChangedCallback(e => _animControllerFolder = e.newValue);
+                row2.Add(presetPath);
+                row2.Add(new VisualElement { style = { width = 8 } });
+                row2.Add(ctrlPath);
+                gSetup.Add(row2);
+            }
+            root.Add(gSetup);
+
+            // ==== Batch creation ====
+            var gBatch = new GroupBox { text = "Batch: Animator Presets by Class" };
+            {
+                _animClassesCsv = new TextField("Classes (comma-separated)") { value = "Seraphim, Cherubim, Archangel" };
+                gBatch.Add(_animClassesCsv);
+
+                var rowT = new VisualElement { style = { flexDirection = FlexDirection.Row } };
+                var skipToggle = new Toggle("Skip existing") { value = _animSkipExisting };
+                skipToggle.tooltip = "Don't recreate existing presets";
+                skipToggle.RegisterValueChangedCallback(e => _animSkipExisting = e.newValue);
+                rowT.Add(skipToggle);
+
+                rowT.Add(new VisualElement { style = { width = 12 } });
+
+                var clearToggle = new Toggle("Clear clips before Auto-Fill") { value = _animClearBeforeFill };
+                clearToggle.RegisterValueChangedCallback(e => _animClearBeforeFill = e.newValue);
+                rowT.Add(clearToggle);
+                gBatch.Add(rowT);
+
+                var rowB = new VisualElement { style = { flexDirection = FlexDirection.Row } };
+                rowB.Add(new Button(() => CreateClassPresetBatch(_animClassesCsv.value, autoFill: false)) { text = "Create Presets" });
+                rowB.Add(new VisualElement { style = { width = 8 } });
+                rowB.Add(new Button(() => CreateClassPresetBatch(_animClassesCsv.value, autoFill: true)) { text = "Create + Auto-Fill" });
+                gBatch.Add(rowB);
+            }
+            root.Add(gBatch);
+
+            // ==== Per Character (clean) ====
+            var gChar = new GroupBox { text = "Per Character" };
+            {
+                // Character SO selector
+                var rowSO = new VisualElement { style = { flexDirection = FlexDirection.Row } };
+                _animCharacterSOField = new ObjectField("Character SO")
+                {
+                    objectType = typeof(ScriptableObject),
+                    allowSceneObjects = false
+                };
+                _animCharacterSOField.RegisterValueChangedCallback(e =>
+                {
+                    // Only act for RpgCharacterSO
+                    var chr = e.newValue as RpgCharacterSO;
+                    if (chr != null)
+                    {
+                        LoadFieldsFromSO(chr);
+                    }
+                });
+                rowSO.Add(_animCharacterSOField);
+                gChar.Add(rowSO);
+
+                // Row of editable fields (ModelPath removed from visible UI)
+                var rowFields = new VisualElement { style = { flexDirection = FlexDirection.Row } };
+                _animName = new TextField("Name");
+                _animClassKey = new TextField("Class");
+
+                rowFields.Add(_animName);
+                rowFields.Add(new VisualElement { style = { width = 8 } });
+                rowFields.Add(_animClassKey);
+                rowFields.Add(new VisualElement { style = { width = 8 } });
+
+                // Hidden internal ModelPath field (not added to UI, keeps code compatibility)
+                if (_animModelPath == null)
+                    _animModelPath = new TextField("ModelPath");
+                _animModelPath.style.display = DisplayStyle.None; // ensure not shown
+
+                // Prefab selector
+                _animModelPrefabField = new ObjectField("Model Prefab")
+                {
+                    objectType = typeof(GameObject),
+                    allowSceneObjects = false
+                };
+                _animModelPrefabField.RegisterValueChangedCallback(e =>
+                {
+                    var go = e.newValue as GameObject;
+                    if (go != null)
+                    {
+                        var path = AssetDatabase.GetAssetPath(go);
+                        if (!string.IsNullOrEmpty(path) && path.EndsWith(".prefab", StringComparison.OrdinalIgnoreCase))
+                        {
+                            // Store internally
+                            if (_animModelPath != null) _animModelPath.value = path;
+                        }
+                    }
+                });
+                rowFields.Add(_animModelPrefabField);
+                gChar.Add(rowFields);
+
+                // Options
+                var rowOpts = new VisualElement { style = { flexDirection = FlexDirection.Row } };
+                var autoFillToggle = new Toggle("Auto-Fill existing") { value = _animAutofillExisting };
+                autoFillToggle.RegisterValueChangedCallback(e => _animAutofillExisting = e.newValue);
+                rowOpts.Add(autoFillToggle);
+
+                rowOpts.Add(new VisualElement { style = { width = 12 } });
+
+                var overwriteToggle = new Toggle("Overwrite existing (delete + recreate)") { value = _animOverwriteExisting };
+                overwriteToggle.RegisterValueChangedCallback(e => _animOverwriteExisting = e.newValue);
+                rowOpts.Add(overwriteToggle);
+                gChar.Add(rowOpts);
+
+                // Row: sync options (put this above the Create/Update buttons)
+                {
+                    var rowSync = new VisualElement { style = { flexDirection = FlexDirection.Row } };
+                    var tSync = new Toggle("Auto-sync from CharacterData") { value = _animAutoSyncFromCharacterData };
+                    tSync.RegisterValueChangedCallback(e => _animAutoSyncFromCharacterData = e.newValue);
+                    rowSync.Add(tSync);
+
+                    // Manual one-click sync (optional but handy)
+                    rowSync.Add(new VisualElement { style = { width = 12, height = 1 } });
+                    rowSync.Add(new Button(() => {
+                        if (SyncSelectedChrFromCharacterData())
+                            Debug.Log("[AnimationLab] Synced CHR from CharacterData.");
+                        else
+                            Debug.LogWarning("[AnimationLab] Sync failed or no matching CharacterData found.");
+                    }) { text = "Sync Now" });
+
+                    gChar.Add(rowSync);
+                }
+
+                // Action buttons
+                var rowB = new VisualElement { style = { flexDirection = FlexDirection.Row } };
+
+                rowB.Add(new Button(() =>
+                {
+                    // run on click
+                    if (_animAutoSyncFromCharacterData)
+                        SyncSelectedChrFromCharacterData();
+
+                    EnsurePresetFromCharacterFields(autoFill: true);
+                })
+                {
+                    text = "Create/Update Preset"
+                });
+
+                rowB.Add(new VisualElement { style = { width = 8 } });
+
+                rowB.Add(new Button(() =>
+                {
+                    GenerateControllerFromCharacterFields();
+                })
+                {
+                    text = "Generate Animator Controller"
+                });
+
+                rowB.Add(new Button(() => AutoFillClipsFromExplosiveFolder()) { text = "Auto-Fill Clips (ExplosiveLLC)" });
+
+
+                gChar.Add(rowB);
+
+                _animLastSyncedLabel = new Label("Last Sync: (none)")
+                {
+                    style = { marginTop = 4, unityFontStyleAndWeight = FontStyle.Italic }
+                };
+                gChar.Add(_animLastSyncedLabel);
+
+            }
+            root.Add(gChar);
+
+            // ==== Preview ====
+            var gPrev = new GroupBox { text = "Model Preview" };
+            {
+                var row = new VisualElement { style = { flexDirection = FlexDirection.Row } };
+                _animPreviewClipField = new ObjectField("Preview Clip")
+                {
+                    objectType = typeof(AnimationClip),
+                    allowSceneObjects = false
+                };
+                row.Add(_animPreviewClipField);
+                row.Add(new VisualElement { style = { width = 8 } });
+                row.Add(new Button(() => RefreshPreviewFromCharacterSO()) { text = "Load Model Preview" });
+                row.Add(new VisualElement { style = { width = 8 } });
+                row.Add(new Button(() => PlayPreviewClip()) { text = "Play Clip" });
+                row.Add(new VisualElement { style = { width = 8 } });
+                row.Add(new Button(() => DisposePreview()) { text = "Clear Preview" });
+                gPrev.Add(row);
+
+                _previewImage = new Image
+                {
+                    scaleMode = ScaleMode.ScaleToFit,
+                    image = Texture2D.blackTexture
+                };
+                _previewImage.style.height = 300;
+                _previewImage.style.marginTop = 6;
+                _previewImage.style.backgroundColor = new Color(0.10f, 0.10f, 0.10f);
+                gPrev.Add(_previewImage);
+            }
+            root.Add(gPrev);
+
+            return root;
+        }
+
+        // Minimal Scripts tab
+        private VisualElement BuildScriptPanel()
+        {
+            var panel = new VisualElement { name = "scripts-panel-root" };
+            panel.Add(new Label("Script Generation (WIP)"));
+            return panel;
+        }
+
+        // No-op data sync for now (keeps Masterlists independent)
+        private static void PopulateCharactersFromScriptableObjects(IEnumerable<CharacterData> list)
+        {
+            // Intentionally left blank to avoid hard-coupling to project-specific SOs.
+        }
+
+        private static void SyncCharactersToScriptableObjects(IEnumerable<CharacterData> list)
+        {
+            // Intentionally left blank; add your project-specific sync here if desired.
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+        }
+
         private void DrawCharacterListForPath(string csvPath, string title)
         {
             var header = new Label(title);
@@ -399,96 +733,20 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor.UI
             PopulateCharactersFromScriptableObjects(characters);
 
             var toolbar = new VisualElement { style = { flexDirection = FlexDirection.Row, alignItems = Align.Center, marginBottom = 6 } };
-            toolbar.style.flexWrap = Wrap.Wrap; // allow wrapping to keep buttons visible
+            toolbar.style.flexWrap = Wrap.Wrap;
+
             var openCsv = new Button(() => EditorUtility.RevealInFinder(csvPath)) { text = "Open CSV" };
             toolbar.Add(openCsv);
 
-            var createPresetBtnTop = new Button(() =>
-            {
-                TheCovenantKeepers.AI_Game_Assistant.Editor.AnimatorPresetTemplates.CreateDefaultRpgPreset();
-            }) { text = "Create RPG AnimatorPreset" };
-            createPresetBtnTop.tooltip = "Creates a default RPG AnimatorPreset (Idle/Walk/Run/Jump/Attacks/etc.).";
-            toolbar.Add(createPresetBtnTop);
-
-            // NEW: Batch create presets per unique Class from the loaded list
-            var createPresetsForClasses = new Button(() =>
-            {
-                if (characters == null || characters.Count == 0) { EditorUtility.DisplayDialog("Create Presets", "No entries loaded.", "OK"); return; }
-                var keys = characters
-                    .Select(c => c?.Class)
-                    .Where(s => !string.IsNullOrWhiteSpace(s))
-                    .Select(s => s.Trim())
-                    .Distinct(System.StringComparer.InvariantCultureIgnoreCase)
-                    .ToList();
-                int created = 0, skipped = 0;
-                foreach (var k in keys)
-                {
-                    var existing = FindAnimatorPresetForClassKey(k);
-                    if (existing != null) { skipped++; continue; }
-                    var path = TheCovenantKeepers.AI_Game_Assistant.Editor.AnimatorPresetTemplates.CreateRpgPresetForClassAuto(k);
-                    if (!string.IsNullOrEmpty(path)) created++;
-                }
-                EditorUtility.DisplayDialog("Create Presets", $"Classes: {keys.Count}\nCreated: {created}\nSkipped (already exist): {skipped}", "OK");
-            }) { text = "Create Presets For Classes" };
-            createPresetsForClasses.tooltip = "Creates one AnimatorPreset per unique Class in the loaded list (skips if already exists).";
-            toolbar.Add(createPresetsForClasses);
-
-            var createAndFillPresets = new Button(() =>
-            {
-                if (characters == null || characters.Count == 0) { EditorUtility.DisplayDialog("Create+Fill Presets", "No entries loaded.", "OK"); return; }
-                var keys = characters
-                    .Select(c => c?.Class)
-                    .Where(s => !string.IsNullOrWhiteSpace(s))
-                    .Select(s => s.Trim())
-                    .Distinct(System.StringComparer.InvariantCultureIgnoreCase)
-                    .ToList();
-                int processed = 0; int filled = 0;
-                var prevSel = Selection.objects;
-                try
-                {
-                    foreach (var k in keys)
-                    {
-                        // Ensure preset exists
-                        var preset = FindAnimatorPresetForClassKey(k);
-                        if (preset == null)
-                        {
-                            var path = TheCovenantKeepers.AI_Game_Assistant.Editor.AnimatorPresetTemplates.CreateRpgPresetForClassAuto(k);
-                            if (!string.IsNullOrEmpty(path)) preset = AssetDatabase.LoadAssetAtPath<ScriptableObject>(path);
-                        }
-                        if (preset == null) continue;
-
-                        // Find a sample CharacterData SO for this class
-                        var sampleChar = FindCharacterSOByClass(k);
-                        if (sampleChar == null)
-                        {
-                            processed++;
-                            continue; // can't auto-fill without hints; user can fill manually later
-                        }
-
-                        // Select preset + character so AutoFill can use both
-                        Selection.objects = new Object[] { preset, sampleChar };
-                        TheCovenantKeepers.AI_Game_Assistant.Editor.AnimatorPresetTemplates.AutoFillClipsInSelectedPreset();
-                        processed++; filled++;
-                    }
-                }
-                finally { Selection.objects = prevSel; }
-
-                EditorUtility.DisplayDialog("Create+Fill Presets", $"Classes: {keys.Count}\nProcessed: {processed}\nAuto-Filled: {filled}", "OK");
-            }) { text = "Create + Auto-Fill Presets (All)" };
-            createAndFillPresets.tooltip = "Creates missing presets per Class and tries to auto-fill them using a sample CharacterData of that Class.";
-            toolbar.Add(createAndFillPresets);
-
             var spacer = new VisualElement(); spacer.style.flexGrow = 1; toolbar.Add(spacer);
+
             var search = new ToolbarSearchField { value = searchText }; search.style.minWidth = 200;
             search.RegisterValueChangedCallback(evt => { searchText = evt.newValue ?? string.Empty; RepaintList(); });
             toolbar.Add(search);
+
             var expandAll = new Button() { text = "Expand All" };
             var collapseAll = new Button() { text = "Collapse All" };
             toolbar.Add(expandAll); toolbar.Add(collapseAll);
-
-            var buildAllBtn = new Button() { text = "Build Prefabs (Filtered)" };
-            buildAllBtn.clicked += () => BuildPrefabsForFiltered();
-            toolbar.Add(buildAllBtn);
 
             (contentTop ?? contentArea).Add(toolbar);
 
@@ -519,9 +777,14 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor.UI
                     var nameField = new TextField("Name") { value = character.Name };
                     nameField.RegisterValueChangedCallback(evt => { character.Name = evt.newValue; fold.text = string.IsNullOrEmpty(character.Name) ? "<unnamed>" : $"{character.Name} — {character.Class} / {character.Faction}"; });
                     inner.Add(nameField);
-                    var classField = new TextField("Class") { value = character.Class }; classField.RegisterValueChangedCallback(evt => { character.Class = evt.newValue; fold.text = string.IsNullOrEmpty(character.Name) ? "<unnamed>" : $"{character.Name} — {character.Class} / {character.Faction}"; }); inner.Add(classField);
 
-                    var factionField = new TextField("Faction") { value = character.Faction }; factionField.RegisterValueChangedCallback(evt => { character.Faction = evt.newValue; fold.text = string.IsNullOrEmpty(character.Name) ? "<unnamed>" : $"{character.Name} — {character.Class} / {character.Faction}"; }); inner.Add(factionField);
+                    var classField = new TextField("Class") { value = character.Class };
+                    classField.RegisterValueChangedCallback(evt => { character.Class = evt.newValue; fold.text = string.IsNullOrEmpty(character.Name) ? "<unnamed>" : $"{character.Name} — {character.Class} / {character.Faction}"; });
+                    inner.Add(classField);
+
+                    var factionField = new TextField("Faction") { value = character.Faction };
+                    factionField.RegisterValueChangedCallback(evt => { character.Faction = evt.newValue; fold.text = string.IsNullOrEmpty(character.Name) ? "<unnamed>" : $"{character.Name} — {character.Class} / {character.Faction}"; });
+                    inner.Add(factionField);
 
                     var modelObj = string.IsNullOrEmpty(character.ModelPath) ? null : AssetDatabase.LoadAssetAtPath<GameObject>(character.ModelPath);
                     var modelField = new ObjectField("Model / Prefab") { objectType = typeof(GameObject), allowSceneObjects = false, value = modelObj };
@@ -543,74 +806,30 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor.UI
                     var idleField = new ObjectField("Idle") { objectType = typeof(AnimationClip), allowSceneObjects = false, value = character.IdleClip };
                     idleField.RegisterValueChangedCallback(e => character.IdleClip = e.newValue as AnimationClip);
                     clipFold.Add(idleField);
+
                     var walkField = new ObjectField("Walk") { objectType = typeof(AnimationClip), allowSceneObjects = false, value = character.WalkClip };
                     walkField.RegisterValueChangedCallback(e => character.WalkClip = e.newValue as AnimationClip);
                     clipFold.Add(walkField);
+
                     var runField = new ObjectField("Run") { objectType = typeof(AnimationClip), allowSceneObjects = false, value = character.RunClip };
                     runField.RegisterValueChangedCallback(e => character.RunClip = e.newValue as AnimationClip);
                     clipFold.Add(runField);
+
                     var a1Clip = new ObjectField("Ability 1") { objectType = typeof(AnimationClip), allowSceneObjects = false, value = character.Ability1Clip };
                     a1Clip.RegisterValueChangedCallback(e => character.Ability1Clip = e.newValue as AnimationClip);
                     clipFold.Add(a1Clip);
+
                     var a2Clip = new ObjectField("Ability 2") { objectType = typeof(AnimationClip), allowSceneObjects = false, value = character.Ability2Clip };
                     a2Clip.RegisterValueChangedCallback(e => character.Ability2Clip = e.newValue as AnimationClip);
                     clipFold.Add(a2Clip);
+
                     var a3Clip = new ObjectField("Ability 3") { objectType = typeof(AnimationClip), allowSceneObjects = false, value = character.Ability3Clip };
                     a3Clip.RegisterValueChangedCallback(e => character.Ability3Clip = e.newValue as AnimationClip);
                     clipFold.Add(a3Clip);
+
                     var ultClip = new ObjectField("Ultimate") { objectType = typeof(AnimationClip), allowSceneObjects = false, value = character.UltimateClip };
                     ultClip.RegisterValueChangedCallback(e => character.UltimateClip = e.newValue as AnimationClip);
                     clipFold.Add(ultClip);
-
-                    // Controller & Preset tools row
-                    var ctrlRow = new VisualElement { style = { flexDirection = FlexDirection.Row, marginTop = 4 } };
-                    var genCtrlBtn = new Button(() =>
-                    {
-                        var so = FindCharacterSOByName(character.Name);
-                        if (so == null)
-                        {
-                            EditorUtility.DisplayDialog("Generate Controller", "Create/Sync ScriptableObjects first (Data > Sync Character ScriptableObjects).", "OK");
-                            return;
-                        }
-                        var ctrlPath = TheCovenantKeepers.AI_Game_Assistant.Editor.CharacterPrefabBuilder.BuildAnimatorControllerForCharacter(so);
-                        if (!string.IsNullOrEmpty(ctrlPath))
-                        {
-                            var ctrl = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(ctrlPath);
-                            character.AnimatorController = ctrl;
-                            animCtrlField.value = ctrl;
-                            EditorUtility.RevealInFinder(ctrlPath);
-                            Debug.Log($"✅ AnimatorController generated: {ctrlPath}");
-                        }
-                        else
-                        {
-                            EditorUtility.DisplayDialog("Generate Controller", "Controller generation failed. Ensure clips/preset are set.", "OK");
-                        }
-                    }) { text = "Generate Controller" };
-                    ctrlRow.Add(genCtrlBtn);
-
-                    var autoFillBtn = new Button(() =>
-                    {
-                        var so = FindCharacterSOByName(character.Name);
-                        if (so == null)
-                        {
-                            EditorUtility.DisplayDialog("Auto-Fill Preset Clips", "Create/Sync Character ScriptableObjects first (Data > Sync Character ScriptableObjects).", "OK");
-                            return;
-                        }
-                        var prevSel = Selection.objects;
-                        try
-                        {
-                            Selection.objects = new Object[] { so };
-                            TheCovenantKeepers.AI_Game_Assistant.Editor.AnimatorPresetTemplates.AutoFillClipsInSelectedPreset();
-                        }
-                        finally
-                        {
-                            Selection.objects = prevSel;
-                        }
-                    }) { text = "Auto-Fill Preset Clips" };
-                    autoFillBtn.tooltip = "Auto-assign clips to the preset matching this character's Class.";
-                    ctrlRow.Add(autoFillBtn);
-
-                    inner.Add(ctrlRow);
 
                     inner.Add(clipFold);
 
@@ -619,7 +838,7 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor.UI
                     {
                         if (!string.IsNullOrEmpty(character.ModelPath))
                         {
-                            var obj = AssetDatabase.LoadAssetAtPath<Object>(character.ModelPath);
+                            var obj = AssetDatabase.LoadAssetAtPath<UObject>(character.ModelPath);
                             if (obj) EditorGUIUtility.PingObject(obj);
                         }
                     }) { text = "Ping" };
@@ -632,22 +851,6 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor.UI
                     modelTools.Add(pingBtn); modelTools.Add(revealBtn); modelTools.Add(clearBtn);
                     inner.Add(modelTools);
 
-                    var buildRow = new VisualElement { style = { flexDirection = FlexDirection.Row, marginBottom = 4 } };
-                    var buildBtn = new Button(() => BuildPrefabForCharacterName(character.Name, kind: "Player")) { text = "Build Prefab" };
-                    buildRow.Add(buildBtn);
-                    var buildEnemyBtn = new Button(() => BuildPrefabForCharacterName(character.Name, kind: "Enemy")) { text = "Build Enemy Prefab" };
-                    buildRow.Add(buildEnemyBtn);
-                    var testBtn = new Button(() => TestAnimatorForCharacter(character.Name, kind: "Player")) { text = "Build & Test" };
-                    buildRow.Add(testBtn);
-
-                    // NEW: Create/Assign AbilityEffectSpawner on prefab (auto-spawn point)
-                    var spawnerBtn = new Button(() => CreateOrAssignSpawnerForCharacter(character.Name, kind: "Player")) { text = "Create/Assign Spawner" };
-                    spawnerBtn.tooltip = "Builds/updates the prefab then adds AbilityEffectSpawner on the root and assigns a VFX_Spawn transform (auto-guessed).";
-                    buildRow.Add(spawnerBtn);
-
-                    inner.Add(buildRow);
-
-                    // Extended identity
                     var subClassField = new TextField("Sub-Class") { value = character.SubClass }; subClassField.RegisterValueChangedCallback(evt => character.SubClass = evt.newValue); inner.Add(subClassField);
                     var resourceField = new TextField("Resource") { value = character.ResourceType }; resourceField.RegisterValueChangedCallback(evt => character.ResourceType = evt.newValue); inner.Add(resourceField);
 
@@ -731,20 +934,26 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor.UI
                 collapseAll.clicked += () => { foreach (var f in foldouts) f.value = false; };
             }
 
-            // Bottom area: actions & status + description editors
             var actionsBar = new VisualElement { style = { flexDirection = FlexDirection.Row, alignItems = Align.Center, marginTop = 4 } };
             var saveButton = new Button(() =>
             {
-                // 1) Save the CSV values
                 CharacterDatabase.SaveCharacters(characters, csvPath);
-
-                // 2) Also push object references (clips/controller/model) to the real ScriptableObject assets
                 SyncCharactersToScriptableObjects(characters);
-
                 EditorUtility.DisplayDialog("Saved", "Character Masterlist saved and clips synced to ScriptableObjects.", "OK");
             }) { text = "💾 Save Changes" };
             actionsBar.Add(saveButton);
             (contentBottom ?? contentArea).Add(actionsBar);
+
+            var btnSyncSOs = new Button(() =>
+            {
+                BuildCharacterSOsFromCsv(
+                    csvPath: csvPath,
+                    outputFolder: "Assets/TheCovenantKeepers/AI_Game_Assistant/ScriptableObjects/Characters"
+                );
+            })
+            { text = "Create/Update Character SOs" };
+            header.Add(btnSyncSOs);
+
 
             var details = new VisualElement { style = { marginTop = 8 } };
             (contentBottom ?? contentArea).Add(details);
@@ -789,399 +998,1379 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor.UI
             RebuildDetails();
         }
 
-        // NEW: bring clip/controller/model selections from persistent ScriptableObjects into the transient UI list
-        private static void PopulateCharactersFromScriptableObjects(IEnumerable<CharacterData> list)
+        // ============ Batch creation ============
+        private void CreateClassPresetBatch(string classesCsv, bool autoFill)
         {
-            foreach (var ch in list)
+            if (_animTemplatePreset == null)
             {
-                if (string.IsNullOrWhiteSpace(ch?.Name)) continue;
-                var soObj = FindCharacterSOByName(ch.Name) as CharacterData;
-                if (soObj == null) continue;
-
-                ch.ModelPath = string.IsNullOrEmpty(ch.ModelPath) ? soObj.ModelPath : ch.ModelPath;
-                if (soObj.AnimatorController != null) ch.AnimatorController = soObj.AnimatorController;
-                if (soObj.IdleClip != null) ch.IdleClip = soObj.IdleClip;
-                if (soObj.WalkClip != null) ch.WalkClip = soObj.WalkClip;
-                if (soObj.RunClip != null) ch.RunClip = soObj.RunClip;
-                if (soObj.Ability1Clip != null) ch.Ability1Clip = soObj.Ability1Clip;
-                if (soObj.Ability2Clip != null) ch.Ability2Clip = soObj.Ability2Clip;
-                if (soObj.Ability3Clip != null) ch.Ability3Clip = soObj.Ability3Clip;
-                if (soObj.UltimateClip != null) ch.UltimateClip = soObj.UltimateClip;
-            }
-        }
-
-        private static void SyncCharactersToScriptableObjects(IEnumerable<CharacterData> list)
-        {
-            bool any = false;
-            foreach (var ch in list)
-            {
-                if (string.IsNullOrWhiteSpace(ch?.Name)) continue;
-                var soObj = FindCharacterSOByName(ch.Name) as CharacterData;
-                if (soObj == null) continue;
-
-                // Copy common fields that matter for controller building
-                soObj.ModelPath = ch.ModelPath;
-                soObj.AnimatorController = ch.AnimatorController;
-                soObj.IdleClip = ch.IdleClip;
-                soObj.WalkClip = ch.WalkClip;
-                soObj.RunClip = ch.RunClip;
-                soObj.Ability1Clip = ch.Ability1Clip;
-                soObj.Ability2Clip = ch.Ability2Clip;
-                soObj.Ability3Clip = ch.Ability3Clip;
-                soObj.UltimateClip = ch.UltimateClip;
-
-                EditorUtility.SetDirty(soObj);
-                any = true;
-            }
-            if (any)
-            {
-                AssetDatabase.SaveAssets();
-                AssetDatabase.Refresh();
-            }
-        }
-
-        // -------- Prefab building helpers --------
-        private static ScriptableObject FindCharacterSOByName(string name)
-        {
-            if (string.IsNullOrWhiteSpace(name)) return null;
-            var guids = AssetDatabase.FindAssets("t:CharacterData");
-            foreach (var g in guids)
-            {
-                var path = AssetDatabase.GUIDToAssetPath(g);
-                var so = AssetDatabase.LoadAssetAtPath<ScriptableObject>(path);
-                if (so == null) continue;
-                var f = so.GetType().GetField("Name", BindingFlags.Public | BindingFlags.Instance);
-                var value = f?.GetValue(so) as string;
-                if (string.IsNullOrEmpty(value)) continue;
-                if (string.Equals(value.Trim(), name.Trim(), System.StringComparison.InvariantCultureIgnoreCase))
-                    return so;
-            }
-            return null;
-        }
-
-        // NEW: find preset by class key
-        private static ScriptableObject FindAnimatorPresetForClassKey(string classKey)
-        {
-            if (string.IsNullOrWhiteSpace(classKey)) classKey = "Default";
-            var guids = AssetDatabase.FindAssets("t:AnimatorPreset");
-            foreach (var guid in guids)
-            {
-                var path = AssetDatabase.GUIDToAssetPath(guid);
-                var so = AssetDatabase.LoadAssetAtPath<ScriptableObject>(path);
-                if (so == null) continue;
-                var field = so.GetType().GetField("characterClassKey", BindingFlags.Public | BindingFlags.Instance);
-                var val = field?.GetValue(so) as string;
-                if (!string.IsNullOrEmpty(val) && string.Equals(val.Trim(), classKey.Trim(), System.StringComparison.InvariantCultureIgnoreCase))
-                    return so;
-            }
-            return null;
-        }
-
-        // NEW: find first CharacterData SO that has Class == classKey
-        private static ScriptableObject FindCharacterSOByClass(string classKey)
-        {
-            if (string.IsNullOrWhiteSpace(classKey)) classKey = "Default";
-            var guids = AssetDatabase.FindAssets("t:CharacterData");
-            foreach (var g in guids)
-            {
-                var path = AssetDatabase.GUIDToAssetPath(g);
-                var so = AssetDatabase.LoadAssetAtPath<ScriptableObject>(path);
-                if (so == null) continue;
-                var f = so.GetType().GetField("Class", BindingFlags.Public | BindingFlags.Instance);
-                var value = f?.GetValue(so) as string;
-                if (!string.IsNullOrEmpty(value) && string.Equals(value.Trim(), classKey.Trim(), System.StringComparison.InvariantCultureIgnoreCase))
-                    return so;
-            }
-            return null;
-        }
-
-        private static void BuildPrefabForCharacterName(string name, string kind)
-        {
-            if (string.IsNullOrWhiteSpace(name))
-            {
-                EditorUtility.DisplayDialog("Build Prefab", "Character name is empty.", "OK");
+                EditorUtility.DisplayDialog("Animator Presets", "Assign a Template Preset in Setup.", "OK");
                 return;
             }
 
-            var so = FindCharacterSOByName(name);
-            if (so == null)
+            AssistantPaths.EnsureFolder(_animPresetFolder);
+
+            var classKeys = (classesCsv ?? "")
+                .Split(',')
+                .Select(s => s.Trim())
+                .Where(s => !string.IsNullOrEmpty(s))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            foreach (var classKey in classKeys)
             {
-                if (EditorUtility.DisplayDialog("ScriptableObject Missing",
-                    $"No CharacterData ScriptableObject found for '{name}'.\n\nRun 'Data/Sync Character ScriptableObjects' first?",
-                    "Run Sync", "Cancel"))
+                var existing = FindPresetByClassKey(classKey, _animPresetFolder);
+                if (existing != null)
                 {
-                    // Run sync using current generated CSV if available
-                    var csv = AssistantPaths.GeneratedCharacterCsv;
-                    if (File.Exists(csv))
+                    if (_animOverwriteExisting)
                     {
-                        var list = CharacterDatabase.LoadCharacters(csv);
-                        TheCovenantKeepers.AI_Game_Assistant.Editor.ScriptableObjectSync.SyncCharacterScriptableObjects(list);
-                        AssetDatabase.Refresh();
-                        so = FindCharacterSOByName(name);
+                        var p = AssetDatabase.GetAssetPath(existing);
+                        if (!string.IsNullOrEmpty(p)) AssetDatabase.DeleteAsset(p);
+                        existing = null;
+                    }
+                    else if (_animSkipExisting)
+                    {
+                        Debug.Log($"[Animator Presets] Skip: preset for '{classKey}' already exists.");
+                        if (autoFill && _animAutofillExisting)
+                        {
+                            if (_animClearBeforeFill) ClearAllAnimationClipsOnPreset(existing);
+                            TryAutoFillPresetClipsWithClass(existing, classKey);
+                            EditorUtility.SetDirty(existing);
+                        }
+                        continue;
+                    }
+                }
+
+                var assetName = $"RPG_{SanitizeFileName(classKey)}_Preset";
+                var path = $"{_animPresetFolder}/{assetName}.asset";
+                var preset = CreatePresetAssetFromTemplate(_animTemplatePreset, path);
+                if (preset == null) { Debug.LogError($"[Animator Presets] Failed to create '{classKey}'."); continue; }
+
+                SetIfExists(preset, "characterClassKey", classKey);
+                SetIfExists(preset, "displayName", assetName);
+
+                if (autoFill)
+                {
+                    if (_animClearBeforeFill) ClearAllAnimationClipsOnPreset(preset);
+                    TryAutoFillPresetClipsWithClass(preset, classKey);
+                }
+
+                EditorUtility.SetDirty(preset);
+            }
+
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+        }
+
+        // ============ Per-character creation ============
+        private void EnsurePresetFromCharacterFields(bool autoFill)
+        {
+            var name = _animName?.value?.Trim();
+            var classKey = _animClassKey?.value?.Trim();
+
+            if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(classKey))
+            {
+                EditorUtility.DisplayDialog("Animator Preset", "Enter both Name and Class.", "OK");
+                return;
+            }
+            if (_animTemplatePreset == null)
+            {
+                EditorUtility.DisplayDialog("Animator Preset", "Assign a Template Preset in Setup.", "OK");
+                return;
+            }
+
+            AssistantPaths.EnsureFolder(_animPresetFolder);
+
+            var existing = FindPresetByClassKey(classKey, _animPresetFolder);
+            if (existing != null && _animOverwriteExisting)
+            {
+                var p = AssetDatabase.GetAssetPath(existing);
+                if (!string.IsNullOrEmpty(p)) AssetDatabase.DeleteAsset(p);
+                existing = null;
+            }
+            else if (existing != null && _animSkipExisting)
+            {
+                Debug.Log($"[Animator Presets] Skip: preset for '{classKey}' already exists.");
+                if (autoFill && _animAutofillExisting)
+                {
+                    if (_animClearBeforeFill) ClearAllAnimationClipsOnPreset(existing);
+                    TryAutoFillPresetClipsWithClass(existing, classKey);
+                    EditorUtility.SetDirty(existing);
+                    AssetDatabase.SaveAssets();
+                }
+                Selection.activeObject = existing;
+                return;
+            }
+
+            var assetName = $"RPG_{SanitizeFileName(classKey)}_Preset";
+            var path = $"{_animPresetFolder}/{assetName}.asset";
+            var preset = CreatePresetAssetFromTemplate(_animTemplatePreset, path);
+            if (preset == null) { Debug.LogError("[Animator Presets] Failed to create preset."); return; }
+
+            SetIfExists(preset, "characterClassKey", classKey);
+            SetIfExists(preset, "displayName", assetName);
+
+            if (autoFill)
+            {
+                if (_animClearBeforeFill) ClearAllAnimationClipsOnPreset(preset);
+                TryAutoFillPresetClipsWithClass(preset, classKey);
+            }
+
+            EditorUtility.SetDirty(preset);
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+            Selection.activeObject = preset;
+        }
+        private void GenerateControllerFromCharacterFields()
+        {
+            var chr = _animCharacterSOField?.value as RpgCharacterSO;
+            if (chr == null)
+            {
+                Debug.LogWarning("[AnimationLab] No Character SO selected to generate controller from.");
+                return;
+            }
+
+            // Path + asset
+            string controllerName = $"{chr.characterName}_Controller";
+            string controllerPath = Path.Combine(_animControllerFolder, $"{controllerName}.controller");
+
+            // Create controller asset (overwrite if exists)
+            var controller = UnityEditor.Animations.AnimatorController.CreateAnimatorControllerAtPath(controllerPath);
+            if (controller == null)
+            {
+                Debug.LogError("[AnimationLab] Failed to create Animator Controller.");
+                return;
+            }
+
+            // Parameters
+            void AddParam(string name, AnimatorControllerParameterType t)
+            {
+                if (!controller.parameters.Any(p => p.name == name))
+                    controller.AddParameter(name, t);
+            }
+            AddParam("IsMoving", AnimatorControllerParameterType.Bool);
+            AddParam("IsAttacking", AnimatorControllerParameterType.Bool);
+            AddParam("IsDead", AnimatorControllerParameterType.Bool);
+            AddParam("Speed", AnimatorControllerParameterType.Float);
+            AddParam("TriggerAttack", AnimatorControllerParameterType.Trigger);
+
+            // Base layer + state machine
+            var layer = controller.layers[0];
+            var sm = layer.stateMachine;
+
+            // Nuke any template/placeholder states that may have carried over
+            RemovePlaceholderStates(sm);
+
+            // Clips (your existing resolver)
+            var idle = GetChrClip(chr, "Idle");
+            var walk = GetChrClip(chr, "Walk");
+            var run = GetChrClip(chr, "Run");
+            var jump = GetChrClip(chr, "Jump");
+            var attack = GetChrClip(chr, "Attack");
+            var hit = GetChrClip(chr, "Hit");
+            var death = GetChrClip(chr, "Death");
+
+            // Helper to add a state if we have a clip
+            AnimatorState AddStateWithClip(string name, AnimationClip clip)
+            {
+                if (clip == null) return null;
+                var st = sm.AddState(name);
+                SetMotion(st, clip);            // IMPORTANT: clears any placeholder first
+                return st;
+            }
+
+            // States
+            var idleState = sm.AddState("Idle");
+            SetMotion(idleState, idle);
+            sm.defaultState = idleState;
+
+            var walkState = AddStateWithClip("Walk", walk);
+            var runState = AddStateWithClip("Run", run);
+            var jumpState = AddStateWithClip("Jump", jump);
+            var attackState = AddStateWithClip("Attack", attack);
+            var hitState = AddStateWithClip("Hit", hit);
+            var deathState = AddStateWithClip("Death", death);
+
+            // Auto transitions back to Idle
+            foreach (var s in sm.states)
+            {
+                if (s.state == idleState) continue;
+                var t = s.state.AddTransition(idleState);
+                t.hasExitTime = true;
+                t.exitTime = 0.9f;
+                t.hasFixedDuration = true;
+            }
+
+            EditorUtility.SetDirty(controller);
+            AssetDatabase.SaveAssets();
+            Debug.Log($"[AnimationLab] Animator Controller created: {controllerPath}");
+        }
+
+        private void RefreshPreviewFromModelPath()
+        {
+            var path = _animModelPath?.value?.Trim();
+            if (string.IsNullOrEmpty(path))
+            {
+                Debug.LogWarning("[AnimationLab] ModelPath is empty.");
+                return;
+            }
+
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+
+            // Fallback 1: if path is a folder, search for a prefab inside it
+            if (prefab == null && AssetDatabase.IsValidFolder(path))
+            {
+                var guids = AssetDatabase.FindAssets("t:Prefab", new[] { path });
+                if (guids != null && guids.Length > 0)
+                {
+                    var first = AssetDatabase.GUIDToAssetPath(guids[0]);
+                    prefab = AssetDatabase.LoadAssetAtPath<GameObject>(first);
+                    if (prefab != null) path = first;
+                }
+            }
+
+            // Fallback 2: if path is a partial or name, try a name search
+            if (prefab == null && !path.EndsWith(".prefab", System.StringComparison.OrdinalIgnoreCase))
+            {
+                var name = System.IO.Path.GetFileNameWithoutExtension(path);
+                if (!string.IsNullOrEmpty(name))
+                {
+                    var guids = AssetDatabase.FindAssets($"{name} t:Prefab");
+                    foreach (var g in guids)
+                    {
+                        var p = AssetDatabase.GUIDToAssetPath(g);
+                        var candidate = AssetDatabase.LoadAssetAtPath<GameObject>(p);
+                        if (candidate != null)
+                        {
+                            prefab = candidate;
+                            path = p;
+                            break;
+                        }
                     }
                 }
             }
 
-            if (so == null)
+            if (prefab == null)
             {
-                EditorUtility.DisplayDialog("Build Prefab", $"Could not find ScriptableObject for '{name}'.", "OK");
+                Debug.LogWarning($"No prefab at or under: {path}");
                 return;
             }
 
-            try
+            // … proceed to spawn preview instance from 'prefab'
+            // (your existing preview utility code here)
+        }
+
+        private void PlayPreviewClip()
+        {
+            if (_previewGO == null)
             {
-                EditorUtility.DisplayProgressBar("Build Prefab", $"Building '{name}'...", 0.6f);
-                var path = TheCovenantKeepers.AI_Game_Assistant.Editor.CharacterPrefabBuilder.BuildCharacterPrefab(so, kind);
-                EditorUtility.ClearProgressBar();
-                if (!string.IsNullOrEmpty(path))
+                Debug.LogWarning("[AnimationLab] Load Model Preview first.");
+                return;
+            }
+
+            var clip = _animPreviewClipField?.value as AnimationClip;
+            if (clip == null)
+            {
+                Debug.LogWarning("[AnimationLab] Assign a Preview Clip.");
+                return;
+            }
+
+            _currentClip = clip;
+            _clipStartTime = EditorApplication.timeSinceStartup;
+            _isPlayingClip = true;
+
+            EditorApplication.update -= OnPreviewUpdate;
+            EditorApplication.update += OnPreviewUpdate;
+        }
+
+        private void DisposePreview()
+        {
+            AnimationMode.StopAnimationMode();
+            if (_previewInstance != null) DestroyImmediate(_previewInstance);
+            _previewInstance = null;
+            if (_preview != null) { _preview.Cleanup(); _preview = null; }
+        }
+
+        private static string SanitizeFileName(string s)
+        {
+            if (string.IsNullOrWhiteSpace(s)) return "Asset";
+            foreach (var ch in System.IO.Path.GetInvalidFileNameChars()) s = s.Replace(ch, '_');
+            return s.Trim();
+        }
+
+        private static ScriptableObject CreatePresetAssetFromTemplate(ScriptableObject template, string path)
+        {
+            var inst = ScriptableObject.Instantiate(template);
+            AssetDatabase.CreateAsset(inst, path);
+            return inst;
+        }
+
+        private static ScriptableObject FindPresetByClassKey(string classKey, string folder)
+        {
+            var expected = $"{folder}/RPG_{SanitizeFileName(classKey)}_Preset.asset";
+            var so = AssetDatabase.LoadAssetAtPath<ScriptableObject>(expected);
+            if (so != null) return so;
+
+            var guids = AssetDatabase.FindAssets("t:ScriptableObject", new[] { folder });
+            foreach (var guid in guids)
+            {
+                var path = AssetDatabase.GUIDToAssetPath(guid);
+                if (!path.EndsWith(".asset")) continue;
+                var candidate = AssetDatabase.LoadAssetAtPath<ScriptableObject>(path);
+                if (candidate == null) continue;
+
+                var key = GetStr(candidate, "characterClassKey");
+                if (!string.IsNullOrEmpty(key) && string.Equals(key.Trim(), classKey.Trim(), StringComparison.OrdinalIgnoreCase))
+                    return candidate;
+            }
+            return null;
+        }
+
+        private static void SetIfExists(object obj, string member, string value)
+        {
+            var t = obj.GetType();
+            var f = t.GetField(member, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            if (f != null && f.FieldType == typeof(string)) { f.SetValue(obj, value); return; }
+            var p = t.GetProperty(member, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            if (p != null && p.PropertyType == typeof(string) && p.CanWrite) p.SetValue(obj, value);
+        }
+
+        private static string GetStr(object obj, string member)
+        {
+            if (obj == null) return null;
+            var t = obj.GetType();
+            var f = t.GetField(member, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            if (f != null && f.FieldType == typeof(string)) return f.GetValue(obj) as string;
+            var p = t.GetProperty(member, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            if (p != null && p.PropertyType == typeof(string)) return p.GetValue(obj) as string;
+            return null;
+        }
+
+        private static void ClearAllAnimationClipsOnPreset(ScriptableObject preset)
+        {
+            if (preset == null) return;
+            var t = preset.GetType();
+            foreach (var f in t.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+            {
+                if (typeof(AnimationClip).IsAssignableFrom(f.FieldType)) f.SetValue(preset, null);
+                else if (f.FieldType.IsArray && f.FieldType.GetElementType() == typeof(AnimationClip))
+                    f.SetValue(preset, Array.CreateInstance(typeof(AnimationClip), 0));
+            }
+        }
+
+        // Very simple matcher: finds clips whose names contain the class key and the action keyword.
+        private static bool TryAutoFillPresetClipsWithClass(ScriptableObject preset, string classKey)
+        {
+            if (preset == null || string.IsNullOrWhiteSpace(classKey)) return false;
+
+            var guids = AssetDatabase.FindAssets("t:AnimationClip");
+            var clips = guids
+                .Select(g => AssetDatabase.GUIDToAssetPath(g))
+                .Select(p => AssetDatabase.LoadAssetAtPath<AnimationClip>(p))
+                .Where(c => c != null && c.name.IndexOf(classKey, StringComparison.OrdinalIgnoreCase) >= 0)
+                .ToList();
+
+            if (clips.Count == 0) return false;
+
+            void set(string field, string token)
+            {
+                var f = preset.GetType().GetField(field, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                if (f == null || !typeof(AnimationClip).IsAssignableFrom(f.FieldType)) return;
+                var c = clips.FirstOrDefault(x => x.name.IndexOf(token, StringComparison.OrdinalIgnoreCase) >= 0);
+                if (c != null) f.SetValue(preset, c);
+            }
+
+            set("Idle", "Idle");
+            set("Walk", "Walk");
+            set("Run", "Run");
+            set("Jump", "Jump");
+            set("Fall", "Fall");
+            set("Land", "Land");
+            set("Attack1", "Attack");
+            set("Hit", "Hit");
+            set("Die", "Die");
+
+            return true;
+        }
+
+        private void BuildCharacterSOsFromCsv(string csvPath, string outputFolder)
+        {
+            if (!File.Exists(csvPath))
+            {
+                EditorUtility.DisplayDialog("CSV → SO", $"CSV not found:\n{csvPath}", "OK");
+                return;
+            }
+
+            // Ensure folder exists
+            if (!AssetDatabase.IsValidFolder(outputFolder))
+            {
+                var parent = "Assets";
+                foreach (var part in outputFolder.Replace('\\', '/').Split('/').Skip(1))
                 {
-                    EditorUtility.RevealInFinder(path);
-                    Debug.Log($"✅ Built prefab: {path}");
+                    var next = $"{parent}/{part}";
+                    if (!AssetDatabase.IsValidFolder(next)) AssetDatabase.CreateFolder(parent, part);
+                    parent = next;
+                }
+            }
+
+            // Pull the parsed characters your editor already uses
+            var chars = CharacterDatabase.LoadCharacters(csvPath); // returns a list in your project
+            if (chars == null || chars.Count == 0)
+            {
+                EditorUtility.DisplayDialog("CSV → SO", "No characters found in CSV.", "OK");
+                return;
+            }
+
+            int created = 0, updated = 0;
+
+            foreach (var c in chars)
+            {
+                var safeName = SanitizeFileName(c.Name);
+                var assetPath = $"{outputFolder}/CHR_{safeName}.asset";
+
+                // Create or load
+                var so = AssetDatabase.LoadAssetAtPath<RpgCharacterSO>(assetPath);
+                if (so == null)
+                {
+                    so = ScriptableObject.CreateInstance<RpgCharacterSO>();
+                    AssetDatabase.CreateAsset(so, assetPath);
+                    created++;
                 }
                 else
                 {
-                    EditorUtility.DisplayDialog("Build Prefab", "Build failed. See Console for details.", "OK");
+                    updated++;
                 }
+
+                // Map fields (adjust to your CharacterData model property names)
+                so.characterName = c.Name;
+                so.type = c.Type;
+                so.role = c.Role;
+                so.affiliation = c.Affiliation;
+                so.@class = c.Class;
+                so.faction = c.Faction;
+                so.element = c.Element;
+                so.gender = c.Gender;
+
+                so.health = c.Health;
+                so.mana = c.Mana;
+                so.attack = c.Attack;
+                so.defense = c.Defense;
+                so.magic = c.Magic;
+                so.speed = (int)c.Speed; // <-- Fix for CS0266
+
+                so.ultimateAbility = c.UltimateAbility;
+                so.loreBackground = c.LoreBackground;
+
+                so.modelPath = c.ModelPath;
+                // Remove these two lines unless you add the properties to CharacterData
+                // so.animatorPresetPath = c.AnimatorPreset;
+                // so.animatorControllerPath = c.AnimatorController;
+
+                so.subClass = c.SubClass;
+                so.resourceType = c.ResourceType;
+
+                so.passiveName = c.PassiveName;
+                so.passiveDescription = c.PassiveDescription;
+
+                so.ability1Name = c.Ability1Name;
+                so.ability1Description = c.Ability1Description;
+                so.ability2Name = c.Ability2Name;
+                so.ability2Description = c.Ability2Description;
+                so.ability3Name = c.Ability3Name;
+                so.ability3Description = c.Ability3Description;
+
+                so.ultimateDescription = c.UltimateDescription;
+
+                EditorUtility.SetDirty(so);
             }
-            catch (System.Exception ex)
+
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+
+            Debug.Log($"[CSV → SO] Characters: {created} created, {updated} updated → {outputFolder}");
+        }
+        private static int ToInt(string s)
+        {
+            if (string.IsNullOrWhiteSpace(s)) return 0;
+            // remove non-digits like %, spaces, etc.
+            var cleaned = new string(s.Where(char.IsDigit).ToArray());
+            if (int.TryParse(cleaned, out var val)) return val;
+            return 0;
+        }
+        // Put this once in AssistantWindow.cs
+        private void LoadFieldsFromSO(ScriptableObject so)
+        {
+            if (so == null) return;
+
+            // Try common names across CharacterData and RpgCharacterSO
+            string name = GetStr(so, "Name") ?? GetStr(so, "characterName");
+            string cls = GetStr(so, "Class") ?? GetStr(so, "@class") ?? GetStr(so, "classKey");
+            string model = GetStr(so, "ModelPath") ?? GetStr(so, "modelPath");
+
+            if (!string.IsNullOrEmpty(name) && _animName != null) _animName.value = name;
+            if (!string.IsNullOrEmpty(cls) && _animClassKey != null) _animClassKey.value = cls;
+            if (!string.IsNullOrEmpty(model) && _animModelPath != null) _animModelPath.value = model;
+
+            // Sync prefab field if the path points to a prefab
+            if (!string.IsNullOrEmpty(model) && _animModelPrefabField != null)
             {
-                EditorUtility.ClearProgressBar();
-                Debug.LogError($"Build Prefab failed for '{name}': {ex.Message}\n{ex}");
+                var go = AssetDatabase.LoadAssetAtPath<GameObject>(model);
+                _animModelPrefabField.value = go;
             }
+
+            Debug.Log($"[AnimationLab] Loaded fields from {so.name} (class: {cls ?? "?"})");
         }
 
-        // NEW: Build and open a temporary test scene with AnimatorTestDriver
-        private static void TestAnimatorForCharacter(string name, string kind)
+
+        // Helper: attempt to resolve a prefab from a path that might be:
+        // - a direct prefab path
+        // - a folder containing prefabs
+        // - a partial/name (without .prefab)
+        // Preference order:
+        //   1. Exact prefab at path
+        //   2. Single prefab in folder
+        //   3. Prefab in folder whose name matches characterName or classKey
+        //   4. Global search by name
+        // Improved prefab resolver with scoring & diagnostics
+        private GameObject ResolvePreviewPrefab(string modelPath, string characterName = null, string classKey = null)
         {
-            var so = FindCharacterSOByName(name);
-            if (so == null)
-            {
-                EditorUtility.DisplayDialog("Test Animator", $"Could not find ScriptableObject for '{name}'.", "OK");
-                return;
-            }
+            if (string.IsNullOrEmpty(modelPath))
+                return null;
 
-            string prefabPath = null;
-            try
-            {
-                EditorUtility.DisplayProgressBar("Test Animator", $"Building '{name}'...", 0.3f);
-                prefabPath = TheCovenantKeepers.AI_Game_Assistant.Editor.CharacterPrefabBuilder.BuildCharacterPrefab(so, kind);
-            }
-            catch (System.Exception ex)
-            {
-                EditorUtility.ClearProgressBar();
-                Debug.LogError($"Build Prefab failed for test: {ex.Message}\n{ex}");
-                return;
-            }
-            finally { EditorUtility.ClearProgressBar(); }
+            // Normalize path slashes
+            modelPath = modelPath.Replace('\\', '/');
 
-            if (string.IsNullOrEmpty(prefabPath))
+            // 1. Direct prefab?
+            if (modelPath.EndsWith(".prefab", StringComparison.OrdinalIgnoreCase))
             {
-                EditorUtility.DisplayDialog("Test Animator", "Prefab build failed.", "OK");
-                return;
-            }
-
-            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
-            if (prefab == null)
-            {
-                EditorUtility.DisplayDialog("Test Animator", $"Could not load prefab at\n{prefabPath}", "OK");
-                return;
-            }
-
-            // Create a fresh scene and drop the instance
-            var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
-            var instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
-            if (instance == null)
-            {
-                EditorUtility.DisplayDialog("Test Animator", "Failed to instantiate prefab.", "OK");
-                return;
-            }
-
-            // Ensure driver is present
-            if (instance.GetComponent<TheCovenantKeepers.AI_Game_Assistant.AnimatorTestDriver>() == null)
-            {
-                instance.AddComponent<TheCovenantKeepers.AI_Game_Assistant.AnimatorTestDriver>();
-            }
-
-            // Simple ground plane
-            var ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
-            ground.name = "TestGround";
-            ground.transform.position = Vector3.zero;
-
-            // Position camera to view the character
-            var cam = Camera.main;
-            if (cam != null)
-            {
-                cam.transform.position = instance.transform.position + new Vector3(0, 1.6f, -6f);
-                cam.transform.rotation = Quaternion.LookRotation(instance.transform.position - cam.transform.position, Vector3.up);
-            }
-
-            Selection.activeObject = instance;
-            EditorGUIUtility.PingObject(instance);
-            Debug.Log($"🎬 Animator Test Scene ready for '{name}'. Press Play and use WASD + 1/2/3/4.");
-        }
-
-        // NEW: Builds/updates the prefab and ensures an AbilityEffectSpawner exists with a sensible spawn Transform
-        private static void CreateOrAssignSpawnerForCharacter(string name, string kind)
-        {
-            if (string.IsNullOrWhiteSpace(name))
-            {
-                EditorUtility.DisplayDialog("Assign Spawner", "Character name is empty.", "OK");
-                return;
-            }
-
-            var so = FindCharacterSOByName(name);
-            if (so == null)
-            {
-                EditorUtility.DisplayDialog("Assign Spawner", $"Could not find ScriptableObject for '{name}'.", "OK");
-                return;
-            }
-
-            string prefabPath = null;
-            try
-            {
-                EditorUtility.DisplayProgressBar("Assign Spawner", $"Building/Loading prefab for '{name}'...", 0.4f);
-                prefabPath = TheCovenantKeepers.AI_Game_Assistant.Editor.CharacterPrefabBuilder.BuildCharacterPrefab(so, kind);
-            }
-            catch (System.Exception ex)
-            {
-                EditorUtility.ClearProgressBar();
-                Debug.LogError($"Assign Spawner failed while building prefab: {ex.Message}\n{ex}");
-                EditorUtility.DisplayDialog("Assign Spawner", "Prefab build failed. See Console.", "OK");
-                return;
-            }
-            finally { EditorUtility.ClearProgressBar(); }
-
-            if (string.IsNullOrEmpty(prefabPath))
-            {
-                EditorUtility.DisplayDialog("Assign Spawner", "Prefab path missing.", "OK");
-                return;
-            }
-
-            GameObject root = null;
-            try
-            {
-                root = PrefabUtility.LoadPrefabContents(prefabPath);
-                if (root == null)
+                var direct = AssetDatabase.LoadAssetAtPath<GameObject>(modelPath);
+                if (direct != null)
                 {
-                    EditorUtility.DisplayDialog("Assign Spawner", "Failed to open prefab contents.", "OK");
-                    return;
+                    // Direct success
+                    return direct;
+                }
+            }
+
+            // Local helper: compute a score for a prefab asset path.
+            int Score(string assetPath, string nameOnly, string charName, string clsKey)
+            {
+                int score = 0;
+                if (!string.IsNullOrEmpty(charName))
+                {
+                    if (string.Equals(nameOnly, charName, StringComparison.OrdinalIgnoreCase)) score += 100;
+                    else if (nameOnly.IndexOf(charName, StringComparison.OrdinalIgnoreCase) >= 0) score += 40;
+                }
+                if (!string.IsNullOrEmpty(clsKey))
+                {
+                    if (string.Equals(nameOnly, clsKey, StringComparison.OrdinalIgnoreCase)) score += 90;
+                    else if (nameOnly.IndexOf(clsKey, StringComparison.OrdinalIgnoreCase) >= 0) score += 30;
+                }
+                // Mild bias toward shorter names (often more specific root objects)
+                score -= Math.Max(0, nameOnly.Length - 20);
+                // Slight boost if under a "Prefabs" folder
+                if (assetPath.IndexOf("/Prefabs/", StringComparison.OrdinalIgnoreCase) >= 0) score += 10;
+                return score;
+            }
+
+            // Collect candidate prefab GUIDs given a folder context.
+            List<string> candidatePaths = new List<string>();
+
+            bool pathIsFolder = AssetDatabase.IsValidFolder(modelPath);
+            if (pathIsFolder)
+            {
+                // Search recursively under the folder
+                var folderGuids = AssetDatabase.FindAssets("t:Prefab", new[] { modelPath });
+                foreach (var g in folderGuids)
+                {
+                    var p = AssetDatabase.GUIDToAssetPath(g);
+                    if (p.EndsWith(".prefab", StringComparison.OrdinalIgnoreCase))
+                        candidatePaths.Add(p);
+                }
+            }
+            else
+            {
+                // If not a folder and not a direct prefab, treat as name hint or a parent folder chain
+                // Try parent directory if it exists
+                var dir = Path.GetDirectoryName(modelPath);
+                if (!string.IsNullOrEmpty(dir) && AssetDatabase.IsValidFolder(dir))
+                {
+                    var dirUnix = dir.Replace('\\', '/');
+                    var folderGuids = AssetDatabase.FindAssets("t:Prefab", new[] { dirUnix });
+                    foreach (var g in folderGuids)
+                    {
+                        var p = AssetDatabase.GUIDToAssetPath(g);
+                        if (p.EndsWith(".prefab", StringComparison.OrdinalIgnoreCase))
+                            candidatePaths.Add(p);
+                    }
                 }
 
-                var spawner = root.GetComponent<TheCovenantKeepers.AI_Game_Assistant.AbilityEffectSpawner>();
-                if (spawner == null)
-                    spawner = root.AddComponent<TheCovenantKeepers.AI_Game_Assistant.AbilityEffectSpawner>();
-
-                spawner.spawn = GuessSpawnTransform(root.transform);
-
-                // Optional: make sure AnimatorTestDriver will trigger spawner if present
-                var driver = root.GetComponent<TheCovenantKeepers.AI_Game_Assistant.AnimatorTestDriver>();
-                if (driver != null) driver.triggerSpawnerOnKeys = true;
-
-                PrefabUtility.SaveAsPrefabAsset(root, prefabPath);
-                Debug.Log($"✅ Spawner assigned on prefab: {prefabPath}");
-                EditorGUIUtility.PingObject(AssetDatabase.LoadAssetAtPath<Object>(prefabPath));
+                // Global name search fallback
+                var nameHint = Path.GetFileNameWithoutExtension(modelPath);
+                if (!string.IsNullOrEmpty(nameHint))
+                {
+                    var nameGuids = AssetDatabase.FindAssets($"{nameHint} t:Prefab");
+                    foreach (var g in nameGuids)
+                    {
+                        var p = AssetDatabase.GUIDToAssetPath(g);
+                        if (p.EndsWith(".prefab", StringComparison.OrdinalIgnoreCase) && !candidatePaths.Contains(p))
+                            candidatePaths.Add(p);
+                    }
+                }
             }
-            catch (System.Exception ex)
-            {
-                Debug.LogError($"Assign Spawner failed: {ex.Message}\n{ex}");
-            }
-            finally
-            {
-                if (root != null) PrefabUtility.UnloadPrefabContents(root);
-                AssetDatabase.SaveAssets();
-                AssetDatabase.Refresh();
-            }
+
+            if (candidatePaths.Count == 0)
+                return null;
+
+            if (candidatePaths.Count == 1)
+                return AssetDatabase.LoadAssetAtPath<GameObject>(candidatePaths[0]);
+
+            // Score candidates
+            var scored = candidatePaths
+                .Select(p =>
+                {
+                    var nameOnly = Path.GetFileNameWithoutExtension(p);
+                    return new
+                    {
+                        Path = p,
+                        Score = Score(p, nameOnly, characterName, classKey)
+                    };
+                })
+                .OrderByDescending(x => x.Score)
+                .ThenBy(x => x.Path.Length)
+                .ToList();
+
+            // If all scores are zero, we still pick the first (deterministic order).
+            var best = scored.First();
+            // Log diagnostic once for visibility
+            Debug.Log($"[AnimationLab] Resolved prefab (score {best.Score}) from '{modelPath}' → '{best.Path}' (candidates: {scored.Count})");
+            return AssetDatabase.LoadAssetAtPath<GameObject>(best.Path);
         }
 
-        private static void AddAbilitySpawnerToSelection()
+        // CHANGED: More robust resolution (folder/name fallback) + better diagnostics.
+        private void RefreshPreviewFromCharacterSO()
         {
-            var go = Selection.activeGameObject;
-            if (go == null)
+            // 1) Prefer the Model Prefab field if it’s set
+            if (_animModelPrefabField?.value is GameObject directPrefab)
             {
-                EditorUtility.DisplayDialog("Add Spawner", "Select a GameObject in the scene or a prefab instance.", "OK");
+                // sync hidden path for other code that uses it
+                var directPath = AssetDatabase.GetAssetPath(directPrefab);
+                if (!string.IsNullOrEmpty(directPath) && _animModelPath != null)
+                    _animModelPath.value = directPath;
+
+                // render directly — no need to resolve via path
+                DisposePreview();
+                EnsurePreviewUtility();
+
+                _previewGO = (GameObject)PrefabUtility.InstantiatePrefab(directPrefab);
+                if (_previewGO == null) { Debug.LogWarning("[AnimationLab] Could not instantiate preview prefab."); return; }
+                if (_previewGO.GetComponent<Animator>() == null) _previewGO.AddComponent<Animator>();
+
+                CenterAndFrame(_previewGO);
+                RenderPreview();
+                Debug.Log($"[AnimationLab] Preview loaded (prefab field): {directPath}");
+                return; // <- we're done
+            }
+
+            // 2) If no prefab field, fall back to your existing SO-driven path flow
+            var so = _animCharacterSOField?.value as ScriptableObject;
+            LoadFieldsFromRpgSO(so);
+            if (so == null) { Debug.LogWarning("[AnimationLab] No Character SO selected."); return; }
+
+            var modelPath = GetStr(so, "ModelPath") ?? GetStr(so, "modelPath");
+            var characterName = GetStr(so, "Name") ?? GetStr(so, "characterName");
+            var classKey = GetStr(so, "Class") ?? GetStr(so, "@class") ?? GetStr(so, "classKey");
+
+            if (string.IsNullOrEmpty(modelPath)) { Debug.LogWarning("[AnimationLab] Character SO has no ModelPath."); return; }
+
+            var prefab = ResolvePreviewPrefab(modelPath, characterName, classKey);
+            if (prefab == null) { Debug.LogWarning($"[AnimationLab] Model prefab not found (after search) from: {modelPath}"); return; }
+
+            var resolvedPath = AssetDatabase.GetAssetPath(prefab);
+            if (!string.IsNullOrEmpty(resolvedPath) && _animModelPath != null) _animModelPath.value = resolvedPath;
+
+            DisposePreview();
+            EnsurePreviewUtility();
+
+            _previewGO = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+            if (_previewGO == null) { Debug.LogWarning("[AnimationLab] Could not instantiate preview prefab."); return; }
+            if (_previewGO.GetComponent<Animator>() == null) _previewGO.AddComponent<Animator>();
+
+            CenterAndFrame(_previewGO);
+            RenderPreview();
+
+            Debug.Log($"[AnimationLab] Preview loaded: {resolvedPath}");
+        }
+
+        // === Preview Utility (re-added) ===
+        private void EnsurePreviewUtility(int width = 900, int height = 500)
+        {
+#if UNITY_EDITOR
+            if (_previewUtil != null) return;
+
+            _previewUtil = new PreviewRenderUtility(true);
+            _previewUtil.cameraFieldOfView = 25f;
+
+            if (_previewRT == null)
+            {
+                _previewRT = new RenderTexture(width, height, 24, RenderTextureFormat.ARGB32)
+                {
+                    name = "AI-Assistant-PreviewRT"
+                };
+                _previewRT.Create();
+            }
+
+            // Camera defaults
+            var cam = _previewUtil.camera;
+            cam.clearFlags = CameraClearFlags.Color;
+            cam.backgroundColor = new Color(0.10f, 0.10f, 0.10f);
+            cam.nearClipPlane = 0.01f;
+            cam.farClipPlane = 500f;
+
+            // Directional light
+            _previewLight = new GameObject("PreviewLight").AddComponent<Light>();
+            _previewLight.type = LightType.Directional;
+            _previewLight.intensity = 1.2f;
+            _previewLight.transform.rotation = Quaternion.Euler(50f, 30f, 0f);
+            _previewUtil.AddSingleGO(_previewLight.gameObject);
+#endif
+        }
+
+        private void CenterAndFrame(GameObject go)
+        {
+            if (_previewUtil == null || go == null) return;
+
+            var bounds = CalculateBounds(go);
+            var size = Mathf.Max(0.001f,
+                Mathf.Max(bounds.size.x, Mathf.Max(bounds.size.y, bounds.size.z)));
+
+            var cam = _previewUtil.camera;
+            // Distance heuristic
+            float dist = size * 2.2f + 0.5f;
+            var center = bounds.center;
+            cam.transform.position = center + new Vector3(0, size * 0.5f, -dist);
+            cam.transform.LookAt(center);
+            cam.nearClipPlane = 0.01f;
+            cam.farClipPlane = dist * 6f;
+        }
+
+        private Bounds CalculateBounds(GameObject go)
+        {
+            var renderers = go.GetComponentsInChildren<Renderer>();
+            if (renderers.Length == 0)
+                return new Bounds(go.transform.position, Vector3.one * 0.5f);
+
+            var b = renderers[0].bounds;
+            for (int i = 1; i < renderers.Length; i++)
+                b.Encapsulate(renderers[i].bounds);
+            return b;
+        }
+
+        private void RenderPreview()
+        {
+            if (_previewUtil == null || _previewImage == null) return;
+
+            var cam = _previewUtil.camera;
+            _previewUtil.BeginPreview(
+                new Rect(0, 0, _previewRT.width, _previewRT.height),
+                GUIStyle.none);
+
+            cam.Render();
+
+            var tex = _previewUtil.EndPreview();
+            _previewImage.image = tex;
+        }
+
+        private void OnPreviewUpdate()
+        {
+#if UNITY_EDITOR
+            if (!_isPlayingClip || _currentClip == null || _previewGO == null)
+                return;
+
+            float t = (float)(EditorApplication.timeSinceStartup - _clipStartTime);
+            if (_currentClip.length > 0.0001f)
+                t = t % _currentClip.length;
+
+            // Sample directly (no Animator state machine required)
+            _currentClip.SampleAnimation(_previewGO, t);
+
+            // Keep camera stable each frame
+            CenterAndFrame(_previewGO);
+            RenderPreview();
+#endif
+        }
+
+        // Optional clean-up hook (if you want to ensure update unsubscribes)
+        private void OnDisable()
+        {
+#if UNITY_EDITOR
+            EditorApplication.update -= OnPreviewUpdate;
+            _isPlayingClip = false;
+#endif
+        }
+
+        private void OnDestroy()
+        {
+#if UNITY_EDITOR
+            EditorApplication.update -= OnPreviewUpdate;
+            _isPlayingClip = false;
+
+            if (_previewGO != null)
+                DestroyImmediate(_previewGO);
+            _previewGO = null;
+
+            if (_previewLight != null)
+                DestroyImmediate(_previewLight.gameObject);
+            _previewLight = null;
+
+            if (_previewUtil != null)
+            {
+                _previewUtil.Cleanup();
+                _previewUtil = null;
+            }
+
+            if (_previewRT != null)
+            {
+                _previewRT.Release();
+                DestroyImmediate(_previewRT);
+                _previewRT = null;
+            }
+#endif
+        }
+
+        // --- Animation Lab: helpers ---
+        // requires: using System.Linq; using UnityEditor; using UnityEngine;
+
+        private static AnimationClip FindClipByTokens(string[] tokens, string[] folders = null)
+        {
+            // tokens are pieces of the name we expect, e.g. new[]{"Idle"} or {"Light","Attack"}
+            if (tokens == null || tokens.Length == 0) return null;
+
+            // Build a name query like: name:Idle name:Attack
+            string query = "t:AnimationClip " + string.Join(" ", tokens.Select(t => $"\"{t}\""));
+
+            string[] guids = (folders != null && folders.Length > 0)
+                ? AssetDatabase.FindAssets(query, folders)
+                : AssetDatabase.FindAssets(query);
+
+            // Score by: contains all tokens (case-insensitive), shortest name wins as tie-breaker
+            AnimationClip best = null;
+            int bestScore = int.MinValue;
+
+            foreach (var guid in guids)
+            {
+                var path = AssetDatabase.GUIDToAssetPath(guid);
+                var clip = AssetDatabase.LoadAssetAtPath<AnimationClip>(path);
+                if (!clip) continue;
+
+                var name = clip.name.ToLowerInvariant();
+                int hits = 0;
+                bool allMatch = true;
+                foreach (var t in tokens)
+                {
+                    var tt = t.Trim().ToLowerInvariant();
+                    if (string.IsNullOrEmpty(tt)) continue;
+                    if (name.Contains(tt)) hits++;
+                    else allMatch = false;
+                }
+
+                // require at least 1 hit; prefer allMatch
+                if (hits == 0) continue;
+
+                int score = hits * 10 - name.Length; // favor more hits, then shorter names
+                if (allMatch) score += 50;
+
+                if (score > bestScore)
+                {
+                    bestScore = score;
+                    best = clip;
+                }
+            }
+
+            return best;
+        }
+
+        // Prefer clips already on the Character SO if available
+        private AnimationClip PreferClip(AnimationClip fromSO, string[] searchTokens, string[] folders = null)
+        {
+            if (fromSO != null) return fromSO;
+            return FindClipByTokens(searchTokens, folders); // your existing search helper
+        }
+
+
+        private static bool TrySetRef(ScriptableObject preset, string fieldName, UObject value)
+        {
+            if (!preset || !value) return false;
+
+            var t = preset.GetType();
+            var f = t.GetField(fieldName, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
+            if (f != null && typeof(UObject).IsAssignableFrom(f.FieldType))
+            {
+                f.SetValue(preset, value);
+                EditorUtility.SetDirty(preset);
+                return true;
+            }
+            var p = t.GetProperty(fieldName, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
+            if (p != null && typeof(UObject).IsAssignableFrom(p.PropertyType) && p.CanWrite)
+            {
+                p.SetValue(preset, value);
+                EditorUtility.SetDirty(preset);
+                return true;
+            }
+            return false;
+        }
+        private bool SyncSelectedChrFromCharacterData()
+        {
+            var chr = _animCharacterSOField?.value as RpgCharacterSO;
+            if (chr == null)
+            {
+                SetSyncStatus("Last Sync: No CHR selected", new Color(0.9f, 0.3f, 0.3f));
+                Debug.LogWarning("[AnimationLab] No CHR selected for sync.");
+                return false;
+            }
+
+            // Prepare / neutral state
+            SetSyncStatus("Last Sync: Searching…", new Color(0.75f, 0.75f, 0.75f));
+
+            // Pick a name to search by
+            var wanted = string.IsNullOrEmpty(chr.characterName) ? chr.name : chr.characterName;
+
+            // Find candidate CharacterData assets
+            var guidMatches = AssetDatabase.FindAssets($"{wanted} t:CharacterData");
+            if (guidMatches == null || guidMatches.Length == 0)
+            {
+                SetSyncStatus($"Last Sync: Not found for '{wanted}'", new Color(0.9f, 0.3f, 0.3f));
+                Debug.LogWarning($"[AnimationLab] No CharacterData found for '{wanted}'.");
+                return false;
+            }
+
+            // Choose best path (prefer exact file name match), else first
+            string bestPath = null;
+            foreach (var guid in guidMatches)
+            {
+                var p = AssetDatabase.GUIDToAssetPath(guid);
+                var file = System.IO.Path.GetFileNameWithoutExtension(p);
+                if (string.Equals(file, wanted, System.StringComparison.OrdinalIgnoreCase))
+                {
+                    bestPath = p;
+                    break;
+                }
+            }
+            if (string.IsNullOrEmpty(bestPath))
+                bestPath = AssetDatabase.GUIDToAssetPath(guidMatches[0]);
+
+            // If multiple results, mark as warning (but still proceed)
+            if (guidMatches.Length > 1)
+            {
+                SetSyncStatus($"Last Sync: Multiple found for '{wanted}' (picked best) ⚠️",
+                    new Color(0.95f, 0.78f, 0.2f));
+            }
+
+            var src = AssetDatabase.LoadAssetAtPath<CharacterData>(bestPath);
+            if (src == null)
+            {
+                SetSyncStatus($"Last Sync: Could not load asset", new Color(0.9f, 0.3f, 0.3f));
+                Debug.LogWarning($"[AnimationLab] Could not load CharacterData at {bestPath}.");
+                return false;
+            }
+
+            // Map fields
+            MapCharacterDataToChr(src, chr);
+
+            EditorUtility.SetDirty(chr);
+            AssetDatabase.SaveAssets();
+
+            var shortPath = System.IO.Path.GetFileName(bestPath);
+            SetSyncStatus($"Last Sync: {shortPath} ✅", new Color(0.35f, 0.85f, 0.45f));
+            return true;
+        }
+        private static void MapCharacterDataToChr(CharacterData src, RpgCharacterSO dst)
+        {
+            // ---- Identity ----
+            dst.type = src.Type;
+            dst.role = src.Role;
+            dst.affiliation = src.Affiliation;
+            dst.@class = src.Class;
+            dst.subClass = src.SubClass;
+            dst.faction = src.Faction;
+            dst.element = src.Element;
+            dst.gender = src.Gender;
+            dst.resourceType = src.ResourceType;
+            // dst.weaponType = (map if your CharacterData has it)
+
+            // ---- Core Stats ----
+            dst.health = src.Health;
+            dst.mana = src.Mana;
+            dst.attack = src.Attack;
+            dst.defense = src.Defense;
+            dst.magic = src.Magic;
+            dst.speed = Mathf.RoundToInt(src.Speed);
+
+            // ---- Attributes ----
+            dst.strength = src.Strength;
+            dst.agility = src.Agility;
+            dst.intelligence = src.Intelligence;
+
+            // ---- Combat ----
+            dst.armor = src.Armor;
+            dst.magicResist = src.MagicResist;
+            dst.attackSpeed = src.AttackSpeed;
+            dst.moveSpeed = src.MoveSpeed; // keep if you also use 'speed'
+            dst.range = src.Range;
+            dst.critChance = src.CritChance;
+            dst.critDamageMultiplier = src.CritDamageMultiplier;
+            dst.armorPenetration = src.ArmorPenetration;
+            dst.magicPenetration = src.MagicPenetration;
+            dst.lifeSteal = src.LifeSteal;
+            dst.spellVamp = src.SpellVamp;
+            dst.cooldownReduction = src.CooldownReduction;
+            dst.tenacity = src.Tenacity;
+
+            // ---- Meta / Lore ----
+            dst.level = src.Level;
+            if (!string.IsNullOrEmpty(src.LoreBackground))
+                dst.loreBackground = src.LoreBackground;
+
+            // If you keep passives/abilities on CharacterData, map them here too:
+            // dst.passiveName = src.PassiveName; etc.
+        }
+
+        // ---------- CHARACTER SO SYNC (CSV -> CHR_) ----------
+        private static string ChrFolder => "Assets/TheCovenantKeepers/AI_Game_Assistant/ScriptableObjects/Characters";
+
+        private RpgCharacterSO FindOrCreateChrSO(string charName)
+        {
+            if (string.IsNullOrWhiteSpace(charName)) charName = "Unnamed";
+            var fileName = $"CHR_{SanitizeFile(charName)}.asset";
+            var path = System.IO.Path.Combine(ChrFolder, fileName).Replace("\\", "/");
+
+            var existing = AssetDatabase.LoadAssetAtPath<RpgCharacterSO>(path);
+            if (existing) return existing;
+
+            if (!AssetDatabase.IsValidFolder(ChrFolder))
+            {
+                var root = "Assets/TheCovenantKeepers/AI_Game_Assistant/ScriptableObjects";
+                if (!AssetDatabase.IsValidFolder(root))
+                    AssetDatabase.CreateFolder("Assets/TheCovenantKeepers/AI_Game_Assistant", "ScriptableObjects");
+                AssetDatabase.CreateFolder(root, "Characters");
+            }
+
+            var so = ScriptableObject.CreateInstance<RpgCharacterSO>();
+            AssetDatabase.CreateAsset(so, path);
+            AssetDatabase.SaveAssets();
+            return so;
+        }
+
+        private static string SanitizeFile(string s)
+        {
+            foreach (var c in System.IO.Path.GetInvalidFileNameChars())
+                s = s.Replace(c.ToString(), "");
+            return s.Trim();
+        }
+
+        private static int RInt(float f) => Mathf.RoundToInt(f);
+        private void SyncAllChrFromCharacterData()
+        {
+            if (characters == null || characters.Count == 0)
+            {
+                Debug.LogWarning("[Sync] No CharacterData entries loaded.");
                 return;
             }
 
-            var spawner = go.GetComponent<TheCovenantKeepers.AI_Game_Assistant.AbilityEffectSpawner>();
-            if (spawner == null) spawner = go.AddComponent<TheCovenantKeepers.AI_Game_Assistant.AbilityEffectSpawner>();
-            spawner.spawn = GuessSpawnTransform(go.transform);
-
-            EditorUtility.SetDirty(go);
-            EditorGUIUtility.PingObject(go);
-            Debug.Log("✅ AbilityEffectSpawner added. Assign AbilityEffect assets for A1/A2/A3/Ult.");
+            foreach (var c in characters)
+            {
+                var dst = FindOrCreateChrSO(c.Name);
+                MapCharacterDataToChr(c, dst);
+            }
+            AssetDatabase.SaveAssets();
+            Debug.Log($"[Sync] Updated/created {characters.Count} CHR_ assets.");
         }
 
-        private static Transform GuessSpawnTransform(Transform root)
+        // ---- Animation Lab helpers ----
+        private void SetSyncStatus(string msg, Color color)
         {
-            var all = root.GetComponentsInChildren<Transform>(true);
-
-            // 1) Explicit marker wins
-            var explicitSpawn = all.FirstOrDefault(x =>
-                string.Equals(x.name, "VFX_Spawn", System.StringComparison.InvariantCultureIgnoreCase));
-            if (explicitSpawn != null) return explicitSpawn;
-
-            // 2) Weighted pick (skip obviously female-named bones if they exist in the rig)
-            bool Skip(Transform t)
-            {
-                var n = t.name.ToLowerInvariant();
-                return n.Contains("female");
-            }
-
-            Transform best = null; int bestScore = int.MinValue;
-            foreach (var tr in all)
-            {
-                if (Skip(tr)) continue;
-                var n = tr.name.ToLowerInvariant();
-                int score = int.MinValue;
-
-                if (n.Contains("righthand") || n.Contains("hand_r") || n.Contains("hand.r")) score = 100;
-                else if (n.Contains("weapon") || n.Contains("muzzle") || n.Contains("wrist")) score = 80;
-                else if (n.Contains("upperchest") || n.Contains("chest") || n.Contains("spine2") || n.Contains("spine1")) score = 60;
-
-                if (score > bestScore) { bestScore = score; best = tr; }
-            }
-            if (best != null) return best;
-
-            // 3) Create a neutral spawn under chest if found, else under root
-            Transform chest = all.FirstOrDefault(t => {
-                var n = t.name.ToLowerInvariant();
-                return n.Contains("upperchest") || n.Contains("chest") || n.Contains("spine2") || n.Contains("spine1");
-            });
-
-            var parent = chest != null ? chest : root;
-            var go = new GameObject("VFX_Spawn");
-            go.transform.SetParent(parent, false);
-            go.transform.localPosition = new Vector3(0f, 0.15f, 0.20f); // a few inches forward from chest
-            go.transform.localRotation = Quaternion.identity;
-            return go.transform;
+            if (_animLastSyncedLabel == null) return;
+            _animLastSyncedLabel.text = msg;
+            _animLastSyncedLabel.style.color = new StyleColor(color);
         }
 
-        // Added: Build all prefabs for the current filtered list (used by toolbar button)
-        private void BuildPrefabsForFiltered()
+        // ------------------------------------------------------------
+        // Loads Name, Class, and ModelPath fields from any character SO
+        // ------------------------------------------------------------
+        private void LoadFieldsFromRpgSO(ScriptableObject so)
         {
-            if (characters == null || characters.Count == 0) return;
+            if (so == null) return;
 
-            var filtered = string.IsNullOrEmpty(searchText)
-                ? new List<CharacterData>(characters)
-                : characters.Where(c =>
-                        (!string.IsNullOrEmpty(c.Name) && c.Name.ToLowerInvariant().Contains(searchText.ToLowerInvariant())) ||
-                        (!string.IsNullOrEmpty(c.Class) && c.Class.ToLowerInvariant().Contains(searchText.ToLowerInvariant())) ||
-                        (!string.IsNullOrEmpty(c.Faction) && c.Faction.ToLowerInvariant().Contains(searchText.ToLowerInvariant()))
-                  ).ToList();
+            // Safely read common field/property names
+            string name = GetStr(so, "Name") ?? GetStr(so, "characterName");
+            string cls = GetStr(so, "Class") ?? GetStr(so, "@class") ?? GetStr(so, "classKey");
+            string model = GetStr(so, "ModelPath") ?? GetStr(so, "modelPath");
 
-            for (int i = 0; i < filtered.Count; i++)
+            if (!string.IsNullOrEmpty(name) && _animName != null) _animName.value = name;
+            if (!string.IsNullOrEmpty(cls) && _animClassKey != null) _animClassKey.value = cls;
+            if (!string.IsNullOrEmpty(model) && _animModelPath != null) _animModelPath.value = model;
+
+            // Load prefab if the path points to one
+            if (!string.IsNullOrEmpty(model) && _animModelPrefabField != null)
             {
-                var ch = filtered[i];
-                try
+                var go = AssetDatabase.LoadAssetAtPath<GameObject>(model);
+                _animModelPrefabField.value = go;
+            }
+
+            Debug.Log($"[AI Assistant] Loaded fields from {so.name} → Class={cls}");
+        }
+
+        private void LoadFieldsFromSO(RpgCharacterSO chr)
+        {
+            if (chr == null) return;
+
+            // name
+            if (_animName != null)
+                _animName.value = string.IsNullOrEmpty(chr.characterName) ? chr.name : chr.characterName;
+
+            // class  ← reads the real field on the SO
+            if (_animClassKey != null)
+                _animClassKey.value = chr.@class;
+
+            // model (optional)
+            if (_animModelPath != null)
+                _animModelPath.value = chr.modelPath;
+            if (_animModelPrefabField != null)
+                _animModelPrefabField.value = chr.modelPrefab;
+
+            Debug.Log($"[AnimationLab] Loaded fields from {chr.name} (class: {chr.@class})");
+        }
+
+        // === Auto-clip linking helpers ===============================================
+
+        private static string[] ClipStateNames = {
+    "Idle","Walk","Run","Jump","Attack","Hit","Death","Cast",
+    "Ability1","Ability2","Ability3","Ultimate"
+};
+
+        private static string DirOf(string assetPath)
+        {
+            if (string.IsNullOrEmpty(assetPath)) return null;
+            var i = assetPath.LastIndexOf('/');
+            return i > 0 ? assetPath.Substring(0, i) : null;
+        }
+
+        private static AnimationClip FindClip(string[] folders, params string[] nameHints)
+        {
+            if (folders == null || folders.Length == 0) return null;
+            // Search by strongest hint first
+            foreach (var hint in nameHints)
+            {
+                if (string.IsNullOrWhiteSpace(hint)) continue;
+                var guids = AssetDatabase.FindAssets($"t:AnimationClip {hint}", folders);
+                foreach (var g in guids)
                 {
-                    EditorUtility.DisplayProgressBar("Build Prefabs", $"{i + 1}/{filtered.Count}: {ch.Name}", (float)(i + 1) / filtered.Count);
-                    BuildPrefabForCharacterName(ch.Name, "Player");
+                    var p = AssetDatabase.GUIDToAssetPath(g);
+                    var clip = AssetDatabase.LoadAssetAtPath<AnimationClip>(p);
+                    if (clip != null) return clip;
                 }
-                catch { }
-                finally { EditorUtility.ClearProgressBar(); }
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Try to populate empty AnimationClip fields on the CHR from folders:
+        /// 1) Folder of the model prefab path (and an "Animations" child, if present)
+        /// 2) Any folder named "*Animations*/*{classKey}*" in the project (broad fallback)
+        /// 3) Whole project fallback by state name
+        /// </summary>
+        private void EnsureClipsOnCharacterSO(RpgCharacterSO chr)
+        {
+            if (chr == null) return;
+
+            // Candidate folders
+            var folders = new List<string>();
+
+            // From modelPath
+            var modelFolder = DirOf(chr.modelPath);
+            if (!string.IsNullOrEmpty(modelFolder))
+            {
+                folders.Add(modelFolder);
+                var animChild = modelFolder + "/Animations";
+                if (AssetDatabase.IsValidFolder(animChild)) folders.Add(animChild);
+            }
+
+            // From class name (search any "*Animations*/*Class*")
+            if (!string.IsNullOrEmpty(chr.@class))
+            {
+                var classLower = chr.@class.ToLowerInvariant();
+                var allFolders = AssetDatabase.GetSubFolders("Assets");
+                foreach (var f in allFolders)
+                {
+                    var fl = f.ToLowerInvariant();
+                    if (fl.Contains("animation") && fl.Contains(classLower))
+                        folders.Add(f);
+                }
+            }
+
+            // Dedup folders
+            folders = folders.Distinct().ToList();
+
+            // Local setter to avoid reflection if your field names differ, edit here:
+            void SetIfNull(ref AnimationClip slot, string state)
+            {
+                if (slot != null) return;
+
+                // Build name hints (strong → weak)
+                var hints = new List<string>();
+                if (!string.IsNullOrEmpty(chr.@class)) hints.Add($"{chr.@class}_{state}");
+                if (!string.IsNullOrEmpty(chr.characterName)) hints.Add($"{chr.characterName}_{state}");
+                hints.Add(state);
+
+                // 1) search candidate folders
+                var clip = FindClip(folders.ToArray(), hints.ToArray());
+
+                // 2) project-wide fallback
+                if (clip == null)
+                {
+                    var g = AssetDatabase.FindAssets($"t:AnimationClip {state}");
+                    foreach (var id in g)
+                    {
+                        var p = AssetDatabase.GUIDToAssetPath(id);
+                        clip = AssetDatabase.LoadAssetAtPath<AnimationClip>(p);
+                        if (clip != null) break;
+                    }
+                }
+
+                if (clip != null) slot = clip;
+            }
+
+            EditorUtility.SetDirty(chr);
+        }
+
+        // Maps friendly keys to your RpgCharacterSO clip slots.
+        private static AnimationClip GetChrClip(RpgCharacterSO c, string key)
+        {
+            if (c == null) return null;
+
+            switch (key)
+            {
+                case "Idle": return c.Idle;
+                case "Walk": return c.Walk;
+                case "Run": return c.Run;
+                case "Jump": return c.Jump;
+                case "Attack": return c.LightAttack ?? c.HeavyAttack ?? c.Ability1;
+                case "Hit": return c.HitReact;
+                case "Death": return c.Death;
+                case "Cast": return c.Ability1;
+                case "A1": return c.Ability1;
+                case "A2": return c.Ability2;
+                case "A3": return c.Ability3;
+                case "Ult": return c.Ultimate;
+                default: return null;
             }
         }
+
+        private void AutoFillClipsFromExplosiveFolder()
+        {
+            var chr = _animCharacterSOField?.value as RpgCharacterSO;
+            if (chr == null)
+            {
+                EditorUtility.DisplayDialog("Auto-Fill Clips", "Select a CHR_ (RpgCharacterSO) first.", "OK");
+                return;
+            }
+
+            // Restrict search to your animation pack folder
+            string[] roots = { "Assets/ExplosiveLLC/RPG Character Mecanim Animation Pack/Animations" };
+            var guids = AssetDatabase.FindAssets("t:AnimationClip", roots);
+
+            // Load all clips once
+            var clips = new List<AnimationClip>(guids.Length);
+            foreach (var g in guids)
+            {
+                var p = AssetDatabase.GUIDToAssetPath(g);
+                var c = AssetDatabase.LoadAssetAtPath<AnimationClip>(p);
+                if (c != null) clips.Add(c);
+            }
+
+            // Simple keyword map → adjust to your pack’s names
+            TryAssign(ref chr.Idle, clips, "idle", "combat idle", "relax idle");
+            TryAssign(ref chr.Walk, clips, "walk forward", "walk");
+            TryAssign(ref chr.Run, clips, "run forward", "run");
+            TryAssign(ref chr.Jump, clips, "jump", "leap");
+            TryAssign(ref chr.LightAttack, clips, "attack1", "light", "slash");
+            TryAssign(ref chr.HeavyAttack, clips, "attack2", "heavy", "power");
+            TryAssign(ref chr.HitReact, clips, "hit", "get hit", "hitreact", "hurt");
+            TryAssign(ref chr.Death, clips, "death", "die");
+            TryAssign(ref chr.Ability1, clips, "cast", "spell", "ability1", "skill1");
+            TryAssign(ref chr.Ability2, clips, "ability2", "skill2");
+            TryAssign(ref chr.Ability3, clips, "ability3", "skill3");
+            TryAssign(ref chr.Ultimate, clips, "ultimate", "finisher");
+
+            EditorUtility.SetDirty(chr);
+            AssetDatabase.SaveAssets();
+
+            EditorUtility.DisplayDialog("Auto-Fill Clips", $"Finished auto-filling from ExplosiveLLC folder.", "OK");
+
+            // local helper
+            void TryAssign(ref AnimationClip slot, List<AnimationClip> pool, params string[] keys)
+            {
+                if (slot != null) return; // don’t overwrite
+                var best = FindBest(pool, keys);
+                if (best != null) slot = best;
+            }
+
+            AnimationClip FindBest(List<AnimationClip> pool, string[] keys)
+            {
+                AnimationClip best = null; int scoreBest = int.MinValue;
+                foreach (var c in pool)
+                {
+                    var n = c.name.ToLowerInvariant();
+                    int s = Score(n, keys);
+                    if (s > scoreBest) { scoreBest = s; best = c; }
+                }
+                return best;
+            }
+
+            int Score(string name, string[] keys)
+            {
+                int s = int.MinValue;
+                foreach (var k in keys)
+                {
+                    var kk = k.ToLowerInvariant();
+                    if (name == kk) s = Math.Max(s, 100);
+                    else if (name.StartsWith(kk)) s = Math.Max(s, 80);
+                    else if (name.Contains(kk)) s = Math.Max(s, 60);
+                }
+                if ((name.Contains("idle") || name.Contains("walk") || name.Contains("run")) && name.Contains("loop"))
+                    s += 5;
+                return s;
+            }
+
+            foreach (var g in guids)
+            {
+                var p = AssetDatabase.GUIDToAssetPath(g);
+                var c = AssetDatabase.LoadAssetAtPath<AnimationClip>(p);
+                if (c == null) continue;
+                var n = c.name.ToLowerInvariant();
+                if (n.Contains("placeholder")) continue;   // <- ignore template placeholders
+                clips.Add(c);
+            }
+
+        }
+        // --- Helpers to prevent template clips leaking into the final controller ---
+
+        // 1) Remove any states that still reference placeholder clips
+        private static void RemovePlaceholderStates(AnimatorStateMachine sm)
+        {
+            if (sm == null) return;
+            foreach (var sc in sm.states)
+            {
+                var m = sc.state.motion;
+                if (m != null && m.name.ToLowerInvariant().Contains("placeholder"))
+                    sm.RemoveState(sc.state);
+            }
+        }
+
+        // 2) Always clear any carried-over motion before assigning a real clip
+        private static void SetMotion(AnimatorState state, AnimationClip clip)
+        {
+            state.motion = null;                // clear template motion
+            if (clip != null) state.motion = clip;
+        }
+
     }
-
-    public enum MasterlistType { Character, Item, Ability, Quest, Location, Beast, Spirit }
 }

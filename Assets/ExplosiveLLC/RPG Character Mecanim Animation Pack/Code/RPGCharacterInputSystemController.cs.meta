@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 5e20277834431ab40a48b8bdf9f630b3
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 63772
+  packageName: RPG Character Mecanim Animation Pack
+  packageVersion: 7.2.1
+  assetPath: Assets/ExplosiveLLC/RPG Character Mecanim Animation Pack/Code/RPGCharacterInputSystemController.cs
+  uploadId: 788702

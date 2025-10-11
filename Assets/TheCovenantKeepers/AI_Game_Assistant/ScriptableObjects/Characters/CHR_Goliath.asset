@@ -1,0 +1,79 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 564641c11c1180040b4e806d9af42819, type: 3}
+  m_Name: CHR_Goliath
+  m_EditorClassIdentifier: TheCovenantKeepers.AI_Game_Assistant.Runtime::TheCovenantKeepers.AI_Game_Assistant.RpgCharacterSO
+  characterName: Goliath
+  class: Fallen Warrior
+  faction: Legion of the Fallen
+  type: Nephilim
+  role: Damage Dealer
+  affiliation: Babylon
+  element: Earth
+  gender: Male
+  subClass: 
+  resourceType: Strength
+  weaponType: 
+  modelPath: Assets/PolygonFantasyHeroCharacters/Prefabs/Characters_Presets/Chr_FantasyHero_Preset_69.prefab
+  modelPrefab: {fileID: 0}
+  controller: {fileID: 0}
+  animatorPreset: {fileID: 0}
+  health: 1200
+  mana: 100
+  attack: 220
+  defense: 250
+  magic: 50
+  speed: 20
+  strength: 0
+  agility: 0
+  intelligence: 0
+  armor: 0
+  magicResist: 0
+  attackSpeed: 0
+  moveSpeed: 0
+  range: 0
+  critChance: 0
+  critDamageMultiplier: 2
+  armorPenetration: 0
+  magicPenetration: 0
+  lifeSteal: 0
+  spellVamp: 0
+  cooldownReduction: 0
+  tenacity: 0
+  level: 0
+  loreBackground: A giant of unrivaled strength and bravado.
+  ultimateAbility: Colossal Smash
+  Idle: {fileID: 1827226128182048838, guid: 18e16464ff92d89418cf6371c66d2c49, type: 3}
+  Walk: {fileID: 1827226128182048838, guid: 4d1848b885118b447994efdb5d28f1c7, type: 3}
+  Run: {fileID: 1827226128182048838, guid: d1d362362666a5e4584c5aa0eaf11dd3, type: 3}
+  Jump: {fileID: 1827226128182048838, guid: 608e04e6fb5479c47bf2cfcac43377ba, type: 3}
+  Fall: {fileID: 0}
+  Land: {fileID: 0}
+  LightAttack: {fileID: 1827226128182048838, guid: bf931894d92f804478ef684be0c54266, type: 3}
+  HeavyAttack: {fileID: 1827226128182048838, guid: f21b60013b235a049abe20c4478d913d, type: 3}
+  Block: {fileID: 0}
+  Dodge: {fileID: 0}
+  HitReact: {fileID: 1827226128182048838, guid: 74c72d480457da54882813d2186fa6ca, type: 3}
+  Death: {fileID: 1827226128182048838, guid: 223d3dca1909f2843b360a4ba04ffb51, type: 3}
+  Ability1: {fileID: 7400004, guid: 98bf046065f24b04786d583c7c3c999b, type: 3}
+  Ability2: {fileID: 0}
+  Ability3: {fileID: 0}
+  Ultimate: {fileID: 0}
+  passiveName: 20
+  passiveDescription: Gigantic Presence
+  ability1Name: Intimidates enemies, reducing their attack.
+  ability1Description: Earthquake
+  ability2Name: Slams the ground heavily.
+  ability2Description: Terrifying Roar
+  ability3Name: Scares nearby enemies, reducing their speed.
+  ability3Description: Titan's Wrath
+  ultimateDescription: Empowers himself with increased strength and damage.

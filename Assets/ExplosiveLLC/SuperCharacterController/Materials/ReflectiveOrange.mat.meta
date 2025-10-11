@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: fe50042dadfcbe14b89863b4d8ad9028
+timeCreated: 1431400898
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 63772
+  packageName: RPG Character Mecanim Animation Pack
+  packageVersion: 7.2.1
+  assetPath: Assets/ExplosiveLLC/SuperCharacterController/Materials/ReflectiveOrange.mat
+  uploadId: 788702

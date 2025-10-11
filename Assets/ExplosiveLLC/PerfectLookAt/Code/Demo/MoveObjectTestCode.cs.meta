@@ -1,0 +1,19 @@
+fileFormatVersion: 2
+guid: 6b22a02346e344548961b157df65ad04
+timeCreated: 1513989614
+licenseType: Store
+MonoImporter:
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 63772
+  packageName: RPG Character Mecanim Animation Pack
+  packageVersion: 7.2.1
+  assetPath: Assets/ExplosiveLLC/PerfectLookAt/Code/Demo/MoveObjectTestCode.cs
+  uploadId: 788702

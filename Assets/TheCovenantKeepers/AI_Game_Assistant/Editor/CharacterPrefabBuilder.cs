@@ -13,7 +13,7 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor
 {
     public static class CharacterPrefabBuilder
     {
-        [MenuItem(TheCovenantKeepers.AI_Game_Assistant.Editor.TckMenu.Build + "/Build Selected Character Prefab")]
+        // Menu item removed; use Assistant Window to build selected character
         public static void BuildSelectedCharacterPrefab()
         {
             var data = Selection.activeObject as ScriptableObject;
@@ -34,24 +34,30 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor
         // helper to ensure a base layer/state machine exists
         private static AnimatorStateMachine EnsureBaseLayerAndGetSM(AnimatorController controller)
         {
-            if (controller.layers == null || controller.layers.Length == 0)
+            if (controller == null) return null;
+
+            void EnsureLayer()
             {
-                var layer = new AnimatorControllerLayer
+                if (controller.layers == null || controller.layers.Length == 0)
                 {
-                    name = "Base Layer",
-                    defaultWeight = 1f,
-                    stateMachine = new AnimatorStateMachine()
-                };
-                controller.AddLayer(layer);
+                    var layer = new AnimatorControllerLayer
+                    {
+                        name = "Base Layer",
+                        defaultWeight = 1f,
+                        stateMachine = new AnimatorStateMachine { name = "Base Layer" }
+                    };
+                    controller.AddLayer(layer);
+                }
+                else if (controller.layers[0].stateMachine == null)
+                {
+                    var layer = controller.layers[0];
+                    layer.stateMachine = new AnimatorStateMachine { name = "Base Layer" };
+                    controller.layers = controller.layers.Select((l, i) => i == 0 ? layer : l).ToArray();
+                }
             }
-            if (controller.layers[0].stateMachine == null)
-            {
-                var sm = new AnimatorStateMachine();
-                var layer = controller.layers[0];
-                layer.stateMachine = sm;
-                controller.layers = controller.layers.Select((l, i) => i == 0 ? layer : l).ToArray();
-            }
-            return controller.layers[0].stateMachine;
+
+            EnsureLayer();
+            return controller.layers.Length > 0 ? controller.layers[0].stateMachine : null;
         }
 
         private static void EnsureStatesHavePlaceholders(AnimatorController controller)
@@ -112,6 +118,7 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor
             if (controller == null) return;
             EnsureBaseLayerAndGetSM(controller);
             EnsureControllerIsValid(controller);
+            EmbedStateMachineSubAssets(controller);
 
             // Ensure placeholder clips are embedded as sub-assets
             var path = AssetDatabase.GetAssetPath(controller);
@@ -134,7 +141,6 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor
         }
 
         // Quick-fix: repair currently selected AnimatorController assets
-        [MenuItem(TheCovenantKeepers.AI_Game_Assistant.Editor.TckMenu.Animator + "/Repair Selected AnimatorController(s)")]
         public static void RepairSelectedAnimatorControllers()
         {
             int fixedCount = 0;
@@ -160,7 +166,6 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor
         }
 
         // Bulk-fix: scan project for AnimatorControllers and repair them
-        [MenuItem("The Covenant Keepers/AI Game Assistant/Animator/Repair All AnimatorControllers In Project", priority = 201)]
         public static void RepairAllAnimatorControllersInProject()
         {
             var guids = AssetDatabase.FindAssets("t:AnimatorController");
@@ -193,6 +198,7 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor
 
             // Guarantee states have placeholder motions before save
             EnsureStatesHavePlaceholders(controller);
+            EmbedStateMachineSubAssets(controller);
 
             AssetDatabase.CreateAsset(controller, controllerPath);
 
@@ -214,6 +220,17 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor
             return saved as RuntimeAnimatorController;
         }
 
+        // Returns the class key used for animation preset/discovery. Prefers a Sub-Class override if present on the CharacterData.
+        private static string GetClassKey(ScriptableObject characterData)
+        {
+            if (characterData == null) return null;
+            string Get(string field) => characterData.GetType().GetField(field, BindingFlags.Public | BindingFlags.Instance)?.GetValue(characterData) as string;
+            // Common variants users may define
+            var sub = Get("SubClass") ?? Get("Subclass") ?? Get("Sub_Class") ?? Get("SubClassKey") ?? Get("Archetype");
+            if (!string.IsNullOrWhiteSpace(sub)) return sub;
+            return Get("Class");
+        }
+
         // NEW: Build only the AnimatorController for a CharacterData and return its asset path
         public static string BuildAnimatorControllerForCharacter(ScriptableObject characterData)
         {
@@ -223,19 +240,25 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor
 
             var name = GetString("Name");
             var modelPath = GetString("ModelPath");
-            var cls = GetString("Class");
+            var cls = GetClassKey(characterData);
 
             try
             {
                 RuntimeAnimatorController controller = null;
+                string builtPath = null;
                 var preset = FindAnimatorPresetForClass(cls ?? "Default");
                 if (preset != null)
                 {
                     controller = BuildAnimatorControllerFor(name ?? "Character", preset);
+                    builtPath = AssetDatabase.GetAssetPath(controller);
+                    // After building from preset, auto-fill missing motions using discovered clips
+                    var ac = controller as AnimatorController ?? AssetDatabase.LoadAssetAtPath<AnimatorController>(builtPath);
+                    if (ac != null) AutoFillControllerMotions(ac, characterData);
                 }
                 else
                 {
                     controller = BuildAnimatorControllerAuto(name ?? "Character", modelPath, characterData);
+                    builtPath = AssetDatabase.GetAssetPath(controller);
                 }
 
                 if (controller == null)
@@ -272,10 +295,11 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor
 
             // Reflection helpers to read fields from CharacterData without hard ref
             string GetString(string field) => characterData.GetType().GetField(field, BindingFlags.Public | BindingFlags.Instance)?.GetValue(characterData) as string;
+            void SetString(string field, string value) { var f = characterData.GetType().GetField(field, BindingFlags.Public | BindingFlags.Instance); if (f != null) { try { f.SetValue(characterData, value); EditorUtility.SetDirty(characterData); } catch { } } }
 
             var name = GetString("Name");
             var modelPath = GetString("ModelPath");
-            var cls = GetString("Class");
+            var cls = GetClassKey(characterData);
 
             RuntimeAnimatorController explicitController = null;
             var animatorCtrlField = characterData.GetType().GetField("AnimatorController", BindingFlags.Public | BindingFlags.Instance);
@@ -312,9 +336,30 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor
                         modelInstance.transform.localScale = Vector3.one;
                         modelAnimator = modelInstance.GetComponentInChildren<Animator>();
                     }
-                    else
+                }
+
+                // If modelPath is empty or invalid, try to auto-find from Polygon Fantasy pack folder
+                if (modelInstance == null)
+                {
+                    string foundPath;
+                    var autoModel = TryFindModelPrefab(name, cls, out foundPath);
+                    if (autoModel != null)
                     {
-                        Debug.LogWarning($"Model not found at '{modelPath}'. Prefab will have no visual");
+                        modelInstance = (GameObject)PrefabUtility.InstantiatePrefab(autoModel, root.transform);
+                        modelInstance.name = autoModel.name;
+                        modelInstance.transform.localPosition = Vector3.zero;
+                        modelInstance.transform.localRotation = Quaternion.identity;
+                        modelInstance.transform.localScale = Vector3.one;
+                        modelAnimator = modelInstance.GetComponentInChildren<Animator>();
+                        // Persist back to CharacterData
+                        if (!string.IsNullOrEmpty(foundPath))
+                        {
+                            SetString("ModelPath", foundPath);
+                        }
+                    }
+                    else if (!string.IsNullOrEmpty(modelPath))
+                    {
+                        Debug.LogWarning($"Model not found at '{modelPath}'. Tried to auto-locate but none matched in PolygonFantasy folder.");
                     }
                 }
 
@@ -341,7 +386,7 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor
                     }
                     else
                     {
-                        builtController = BuildAnimatorControllerAuto(name ?? root.name, modelPath, characterData);
+                        builtController = BuildAnimatorControllerAuto(name ?? root.name, GetString("ModelPath"), characterData);
                         if (builtController != null)
                             Debug.Log($"Built basic animator controller for '{name}' using assigned/discovered clips.");
                     }
@@ -350,7 +395,12 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor
                 {
                     // As a safety, repair controller if needed
                     var ac = builtController as AnimatorController ?? AssetDatabase.LoadAssetAtPath<AnimatorController>(AssetDatabase.GetAssetPath(builtController));
-                    if (ac != null) RepairAnimatorController(ac);
+                    if (ac != null)
+                    {
+                        // Fill any placeholder/null motions using discovered clips (e.g., bow)
+                        AutoFillControllerMotions(ac, characterData);
+                        RepairAnimatorController(ac);
+                    }
                     animator.runtimeAnimatorController = builtController;
                 }
 
@@ -372,6 +422,43 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor
             {
                 GameObject.DestroyImmediate(root);
             }
+        }
+
+        private static GameObject TryFindModelPrefab(string characterName, string classKey, out string foundPath)
+        {
+            foundPath = null;
+            var searchFolders = new List<string>();
+            const string PolygonPresetFolder = "Assets/PolygonFantasyHeroCharacters/Prefabs/Characters_Presets";
+            if (AssetDatabase.IsValidFolder(PolygonPresetFolder)) searchFolders.Add(PolygonPresetFolder);
+
+            if (searchFolders.Count == 0) return null;
+
+            // Prefer exact character name, then class keyword
+            string[] nameTokens = new[] { characterName, classKey, "archer", "ranger" };
+
+            GameObject best = null; int bestScore = int.MinValue;
+            foreach (var guid in AssetDatabase.FindAssets("t:GameObject", searchFolders.ToArray()))
+            {
+                var path = AssetDatabase.GUIDToAssetPath(guid);
+                var go = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+                if (go == null) continue;
+                var n = go.name.ToLowerInvariant();
+                int score = 0;
+                foreach (var tk in nameTokens)
+                {
+                    var t = (tk ?? string.Empty).Trim().ToLowerInvariant();
+                    if (string.IsNullOrEmpty(t)) continue;
+                    if (n.Contains(t)) score += 10;
+                }
+                // prefer humanoid rigs with Animator component
+                var hasAnimator = go.GetComponentInChildren<Animator>() != null;
+                if (hasAnimator) score += 5;
+                if (score > bestScore)
+                {
+                    bestScore = score; best = go; foundPath = path;
+                }
+            }
+            return best;
         }
 
         private static void TryFitCharacterControllerFromModel(CharacterController controller, GameObject root, GameObject modelInstance)
@@ -422,6 +509,15 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor
         private static ScriptableObject FindAnimatorPresetForClass(string classKey)
         {
             var guids = AssetDatabase.FindAssets("t:AnimatorPreset");
+            if (guids == null || guids.Length == 0) return null;
+
+            string pkgRoot = GetAssistantPackageRoot() ?? "Assets/TheCovenantKeepers/AI_Game_Assistant";
+            string preferredFolder = (pkgRoot + "/AnimatorPresets").Replace('\\','/');
+
+            ScriptableObject best = null;
+            int bestScore = int.MinValue;
+            var matches = new List<(string path, ScriptableObject so, int score)>();
+
             foreach (var guid in guids)
             {
                 var path = AssetDatabase.GUIDToAssetPath(guid);
@@ -429,10 +525,48 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor
                 if (so == null) continue;
                 var f = so.GetType().GetField("characterClassKey", BindingFlags.Public | BindingFlags.Instance);
                 var val = f?.GetValue(so) as string;
-                if (!string.IsNullOrEmpty(val) && string.Equals(val, classKey, StringComparison.InvariantCultureIgnoreCase))
-                    return so;
+                if (string.IsNullOrEmpty(val) || !string.Equals(val, classKey, StringComparison.InvariantCultureIgnoreCase))
+                    continue;
+
+                int score = 0;
+                // Prefer assets inside our tool's AnimatorPresets folder
+                var p = (path ?? string.Empty).Replace('\\','/');
+                if (p.StartsWith(preferredFolder, StringComparison.InvariantCultureIgnoreCase)) score += 1000;
+                // Prefer names that include the class key
+                var fileName = System.IO.Path.GetFileNameWithoutExtension(p).ToLowerInvariant();
+                if (!string.IsNullOrEmpty(classKey) && fileName.Contains(classKey.ToLowerInvariant())) score += 50;
+                // Prefer presets with more filled states (animationClip != null)
+                try
+                {
+                    var statesField = so.GetType().GetField("states", BindingFlags.Public | BindingFlags.Instance);
+                    var states = statesField?.GetValue(so) as IEnumerable;
+                    int filled = 0, total = 0;
+                    if (states != null)
+                    {
+                        foreach (var s in states)
+                        {
+                            if (s == null) continue;
+                            total++;
+                            var clip = s.GetType().GetField("animationClip", BindingFlags.Public | BindingFlags.Instance)?.GetValue(s) as Motion;
+                            if (clip != null) filled++;
+                        }
+                    }
+                    score += filled * 5; // weight toward filled presets
+                    score += total;      // minor weight toward richer graphs
+                }
+                catch { }
+
+                matches.Add((p, so, score));
+                if (score > bestScore) { best = so; bestScore = score; }
             }
-            return null;
+
+            if (matches.Count > 1)
+            {
+                var list = string.Join("\n", matches.OrderByDescending(m => m.score).Select(m => $" - {m.path} (score {m.score})"));
+                Debug.LogWarning($"Multiple AnimatorPresets found for class '{classKey}'. Picking the highest score.\n{list}\nChosen: {AssetDatabase.GetAssetPath(best)}");
+            }
+
+            return best;
         }
 
         private static RuntimeAnimatorController BuildAnimatorControllerFor(string name, ScriptableObject preset)
@@ -584,6 +718,7 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor
         private static RuntimeAnimatorController BuildAnimatorControllerAuto(string name, string modelPath, ScriptableObject characterData = null)
         {
             var explicitClips = new Dictionary<string, AnimationClip>(StringComparer.InvariantCultureIgnoreCase);
+            string classKey = null;
             if (characterData != null)
             {
                 AnimationClip GetClip(string field) => characterData.GetType().GetField(field, BindingFlags.Public | BindingFlags.Instance)?.GetValue(characterData) as AnimationClip;
@@ -601,9 +736,12 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor
                 if (a2ClipAssigned != null) explicitClips["a2"] = a2ClipAssigned;
                 if (a3ClipAssigned != null) explicitClips["a3"] = a3ClipAssigned;
                 if (ultClipAssigned != null) explicitClips["ult"] = ultClipAssigned;
+
+                // Prefer Sub-Class override for discovery/presets (e.g., Divine Archer vs Divine Warrior)
+                classKey = GetClassKey(characterData);
             }
 
-            var discovered = DiscoverClips(name, modelPath);
+            var discovered = DiscoverClips(name, modelPath, classKey);
             void TryBring(string key)
             {
                 if (!explicitClips.ContainsKey(key) && discovered.TryGetValue(key, out var clip)) explicitClips[key] = clip;
@@ -675,7 +813,7 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor
                 return st;
             }
 
-            void AddTriggeredState(string key, string stateName, string triggerName, float backExitTime = 0.9f)
+            void AddTriggeredState(string key, string stateName, string triggerName, float backExitTime = 0.95f)
             {
                 if (!explicitClips.TryGetValue(key, out var clip)) return;
                 var st = sm.AddState(stateName);
@@ -758,8 +896,76 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor
             return SaveAnimatorController(controller, controllerPath);
         }
 
-        // Make discover method public so other tools (e.g., AnimatorPresetTemplates) can reuse it
-        public static Dictionary<string, AnimationClip> DiscoverClips(string characterName, string modelPath)
+        private static void AutoFillControllerMotions(AnimatorController ac, ScriptableObject characterData)
+        {
+            if (ac == null || characterData == null) return;
+
+            string GetString(string field) => characterData.GetType().GetField(field, BindingFlags.Public | BindingFlags.Instance)?.GetValue(characterData) as string;
+            var name = GetString("Name");
+            var modelPath = GetString("ModelPath");
+            var cls = GetClassKey(characterData);
+
+            var map = DiscoverClips(name, modelPath, cls);
+            if (map == null || map.Count == 0) return;
+
+            var sm = ac.layers != null && ac.layers.Length > 0 ? ac.layers[0].stateMachine : null;
+            if (sm == null) return;
+
+            string KeyForState(string stateName)
+            {
+                var n = (stateName ?? string.Empty).ToLowerInvariant();
+                if (n.Contains("idle")) return "idle";
+                if (n.Contains("walk")) return "walk";
+                if (n.Contains("run")) return "run";
+                if (n.Contains("jump")) return "jump";
+                if (n.Contains("fall")) return "fall";
+                if (n.Contains("land")) return "land";
+                if (n.Contains("dodge") || n.Contains("roll")) return "dodge";
+                if (n.Contains("heavy")) return "heavy";
+                if (n.Contains("light")) return "light";
+                if (n.Contains("block") || n.Contains("guard")) return "block";
+                if (n.Contains("hit") || n.Contains("hurt")) return "hit";
+                if (n.Contains("death") || n == "die") return "die";
+                if (n.Contains("ability1") || n == "a1") return "a1";
+                if (n.Contains("ability2") || n == "a2") return "a2";
+                if (n.Contains("ability3") || n == "a3") return "a3";
+                if (n.Contains("ultimate") || n == "ult") return "ult";
+                return null;
+            }
+
+            bool IsPlaceholder(Motion m)
+            {
+                var clip = m as AnimationClip;
+                if (clip == null) return false;
+                return clip.name != null && clip.name.IndexOf("placeholder", StringComparison.InvariantCultureIgnoreCase) >= 0;
+            }
+
+            bool changed = false;
+            foreach (var child in sm.states)
+            {
+                var st = child.state; if (st == null) continue;
+                var key = KeyForState(st.name);
+                if (string.IsNullOrEmpty(key)) continue;
+
+                var needs = st.motion == null || IsPlaceholder(st.motion);
+                if (!needs) continue;
+
+                if (map.TryGetValue(key, out var clip) && clip != null)
+                {
+                    st.motion = clip; changed = true;
+                }
+            }
+
+            if (changed)
+            {
+                EnsureControllerIsValid(ac);
+                EditorUtility.SetDirty(ac);
+                AssetDatabase.SaveAssets();
+                AssetDatabase.Refresh();
+            }
+        }
+
+        private static Dictionary<string, AnimationClip> DiscoverClips(string characterName, string modelPath, string classKey = null)
         {
             var dict = new Dictionary<string, AnimationClip>(StringComparer.InvariantCultureIgnoreCase);
 
@@ -785,6 +991,10 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor
                 }
             }
             catch { }
+
+            // Always include the bow pack folder if it exists, so archers get the right clips
+            const string BowFolder = "Assets/ExplosiveLLC/RPG Character Mecanim Animation Pack/Animations/2Hand-Bow";
+            if (AssetDatabase.IsValidFolder(BowFolder)) searchFolders.Add(BowFolder);
 
             if (AssetDatabase.IsValidFolder("Assets/ExplosiveLLC")) searchFolders.Add("Assets/ExplosiveLLC");
             searchFolders = searchFolders.Distinct().ToList();
@@ -827,6 +1037,40 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor
                 if (dict.ContainsKey(key)) return;
 
                 AnimationClip best = null;
+                int bestScore = int.MinValue;
+
+                void Consider(AnimationClip clip, string path)
+                {
+                    if (clip == null) return;
+                    if (!NameMatches(clip, tokens)) return;
+
+                    int score = 0;
+                    var p = path ?? AssetDatabase.GetAssetPath(clip);
+                    var n = (clip.name ?? string.Empty).ToLowerInvariant();
+
+                    // Strong bias: bow folder for archers
+                    if (!string.IsNullOrEmpty(classKey) && classKey.ToLowerInvariant().Contains("archer"))
+                    {
+                        if (p.Replace('\\','/').Contains("/2Hand-Bow")) score += 100;
+                        if (n.Contains("bow") || n.Contains("aim") || n.Contains("shoot")) score += 20;
+                    }
+
+                    // Prefer clips in the same folder as the model
+                    if (!string.IsNullOrEmpty(modelPath))
+                    {
+                        var modelDir = Path.GetDirectoryName(modelPath)?.Replace('\\','/');
+                        if (!string.IsNullOrEmpty(modelDir) && p.StartsWith(modelDir)) score += 30;
+                    }
+
+                    // Prefer ExplosiveLLC pack over random
+                    if (p.Contains("/ExplosiveLLC/")) score += 10;
+
+                    if (best == null || score > bestScore)
+                    {
+                        best = clip; bestScore = score;
+                    }
+                }
+
                 void ScanGuids(IEnumerable<string> guids)
                 {
                     foreach (var guid in guids)
@@ -834,15 +1078,7 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor
                         var path = AssetDatabase.GUIDToAssetPath(guid);
                         var clip = AssetDatabase.LoadAssetAtPath<AnimationClip>(path);
                         if (clip == null) continue;
-                        if (NameMatches(clip, tokens))
-                        {
-                            if (best == null) { best = clip; continue; }
-                            var p = AssetDatabase.GetAssetPath(clip);
-                            var bp = AssetDatabase.GetAssetPath(best);
-                            bool prefer = (p.Contains("/ExplosiveLLC/") && !bp.Contains("/ExplosiveLLC/")) ||
-                                          (!string.IsNullOrEmpty(modelPath) && p.StartsWith(Path.GetDirectoryName(modelPath) ?? string.Empty));
-                            if (prefer) best = clip;
-                        }
+                        Consider(clip, path);
                     }
                 }
 
@@ -852,21 +1088,24 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor
                 if (best != null) dict[key] = best;
             }
 
-            var charHints = new[] { characterName };
+            // Build token sets with class-specific hints
+            var charHints = new List<string>();
+            if (!string.IsNullOrEmpty(characterName)) charHints.Add(characterName);
+            if (!string.IsNullOrEmpty(classKey)) charHints.Add(classKey);
 
             // Locomotion
-            TryAddByTokens("idle", new[] { "idle", "idlebattle", "idlerelaxed", "idle_01", "relaxidle" }.Concat(charHints));
-            TryAddByTokens("walk", new[] { "walk", "move", "walkforward", "locomotion", "strafe" }.Concat(charHints));
-            TryAddByTokens("run", new[] { "run", "sprint", "jog", "movefast" }.Concat(charHints));
+            TryAddByTokens("idle", new[] { "idle", "idlebattle", "idlerelaxed", "idle_01", "relaxidle", "bowidle", "aimidle" }.Concat(charHints));
+            TryAddByTokens("walk", new[] { "walk", "move", "walkforward", "locomotion", "strafe", "walkbow", "walk_aim" }.Concat(charHints));
+            TryAddByTokens("run", new[] { "run", "sprint", "jog", "movefast", "runbow", "run_aim" }.Concat(charHints));
 
             // Jumping/air/landing
             TryAddByTokens("jump", new[] { "jump", "hop", "leap" }.Concat(charHints));
             TryAddByTokens("fall", new[] { "fall", "air", "inair" }.Concat(charHints));
             TryAddByTokens("land", new[] { "land", "landing" }.Concat(charHints));
 
-            // Combat
-            TryAddByTokens("light", new[] { "lightattack", "attack1", "attack_light", "slashlight", "punch", "attack" }.Concat(charHints));
-            TryAddByTokens("heavy", new[] { "heavyattack", "attack2", "attack_heavy", "smash", "powerattack" }.Concat(charHints));
+            // Combat (bow bias)
+            TryAddByTokens("light", new[] { "shoot", "fire", "attack", "light", "quick", "arrow", "loose" }.Concat(charHints));
+            TryAddByTokens("heavy", new[] { "power", "charged", "draw", "aim", "shootheavy", "heavy", "arrow", "release" }.Concat(charHints));
             TryAddByTokens("dodge", new[] { "dodge", "roll", "evade", "sidestep" }.Concat(charHints));
             TryAddByTokens("block", new[] { "block", "guard", "shield" }.Concat(charHints));
             TryAddByTokens("hit", new[] { "hit", "hurt", "impact", "damage", "gethit" }.Concat(charHints));
@@ -905,6 +1144,35 @@ namespace TheCovenantKeepers.AI_Game_Assistant.Editor
                     AssetDatabase.CreateFolder(current, parts[i]);
                 current = next;
             }
+        }
+
+        private static void EmbedStateMachineSubAssets(AnimatorController controller)
+        {
+            if (controller == null) return;
+            var path = AssetDatabase.GetAssetPath(controller);
+            if (string.IsNullOrEmpty(path)) return;
+            var sm = controller.layers != null && controller.layers.Length > 0 ? controller.layers[0].stateMachine : null;
+            if (sm == null) return;
+
+            // Add SM and orphan states as sub-assets if they do not have their own asset path
+            void TryAdd(UnityEngine.Object obj)
+            {
+                if (obj == null) return;
+                var p = AssetDatabase.GetAssetPath(obj);
+                if (string.IsNullOrEmpty(p)) AssetDatabase.AddObjectToAsset(obj, controller);
+            }
+
+            TryAdd(sm);
+            foreach (var child in sm.states)
+            {
+                TryAdd(child.state);
+                TryAdd(child.state?.motion);
+            }
+            foreach (var t in sm.anyStateTransitions)
+                TryAdd(t);
+            foreach (var t in sm.entryTransitions)
+                TryAdd(t);
+            // Note: AnimatorStateMachine does not expose a generic transitions collection per machine; per-state transitions are covered via child.state transitions added as sub-assets above.
         }
     }
 }

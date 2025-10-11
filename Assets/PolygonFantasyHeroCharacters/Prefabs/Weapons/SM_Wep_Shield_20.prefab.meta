@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: eb838eeecbe944242b5777c1da782ec1
+timeCreated: 1554786145
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 143468
+  packageName: POLYGON Modular Fantasy Hero Characters - Low Poly 3D Art by Synty
+  packageVersion: 1.3.2
+  assetPath: Assets/PolygonFantasyHeroCharacters/Prefabs/Weapons/SM_Wep_Shield_20.prefab
+  uploadId: 756033

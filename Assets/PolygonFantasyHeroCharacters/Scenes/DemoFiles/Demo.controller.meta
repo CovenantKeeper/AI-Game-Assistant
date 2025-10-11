@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: b24c2658bd1606148b085291900ae2f6
+timeCreated: 1554872141
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 9100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 143468
+  packageName: POLYGON Modular Fantasy Hero Characters - Low Poly 3D Art by Synty
+  packageVersion: 1.3.2
+  assetPath: Assets/PolygonFantasyHeroCharacters/Scenes/DemoFiles/Demo.controller
+  uploadId: 756033

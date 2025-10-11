@@ -1,0 +1,287 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &17187261090623834
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7715120498320385722}
+  m_Layer: 0
+  m_Name: vfx_ArcanePortal_v10_WhiteGreen
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &7715120498320385722
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 17187261090623834}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -20, y: 0, z: 5}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 4774581981704309383}
+  m_Father: {fileID: 0}
+  m_RootOrder: 0
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1517764146515239082
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 4774581981704309383}
+  - component: {fileID: 7926476133738378582}
+  - component: {fileID: 8632093124327900666}
+  m_Layer: 0
+  m_Name: vfxgraph_GalaxyPortal_v1
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &4774581981704309383
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1517764146515239082}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 7715120498320385722}
+  m_RootOrder: 0
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!2083052967 &7926476133738378582
+VisualEffect:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1517764146515239082}
+  m_Enabled: 1
+  m_Asset: {fileID: 8926484042661614526, guid: ea76bfdc1e1ee2a4c913573e3f601230, type: 3}
+  m_InitialEventName: OnPlay
+  m_InitialEventNameOverriden: 0
+  m_StartSeed: 0
+  m_ResetSeedOnPlay: 1
+  m_ResourceVersion: 1
+  m_PropertySheet:
+    m_Float:
+      m_Array:
+      - m_Value: 10
+        m_Name: Duration
+        m_Overridden: 1
+      - m_Value: 30
+        m_Name: CircleBrightTwirlStrength
+        m_Overridden: 1
+      - m_Value: 2.5
+        m_Name: CircleBrightVoronoiScale
+        m_Overridden: 1
+      - m_Value: 12
+        m_Name: CircleBrightVoronoiSpeed
+        m_Overridden: 1
+      - m_Value: 1
+        m_Name: CircleBrightVoronoiPower
+        m_Overridden: 1
+      - m_Value: 1.1
+        m_Name: CircleBrightVoronoiIntensity
+        m_Overridden: 1
+      - m_Value: 1.4
+        m_Name: CircleBrightVoronoiCenterDissolve
+        m_Overridden: 1
+      - m_Value: 1
+        m_Name: FloatingParticlesRadius
+        m_Overridden: 1
+      - m_Value: -3
+        m_Name: FloatingParticleslRotationSpeed
+        m_Overridden: 1
+      - m_Value: 1.5
+        m_Name: FloatingParticlesLifetime
+        m_Overridden: 1
+      - m_Value: 1
+        m_Name: ConeRate
+        m_Overridden: 1
+      - m_Value: 1
+        m_Name: RingRate
+        m_Overridden: 1
+      - m_Value: 20
+        m_Name: ElectricityRate
+        m_Overridden: 1
+      - m_Value: 20
+        m_Name: FloatingParticlesRate
+        m_Overridden: 1
+    m_Vector2f:
+      m_Array:
+      - m_Value: {x: 0.7, y: 0.3}
+        m_Name: RingTextureDarkTiling
+        m_Overridden: 1
+      - m_Value: {x: 0, y: -1}
+        m_Name: RingTextureScrollSpeed
+        m_Overridden: 1
+      - m_Value: {x: 2, y: 0.2}
+        m_Name: RingTextureBrightTiling
+        m_Overridden: 1
+      - m_Value: {x: 1.3, y: 0.2}
+        m_Name: ConeTextureBrightTiling
+        m_Overridden: 1
+      - m_Value: {x: 0, y: -0.6}
+        m_Name: ConeTextureSpeed
+        m_Overridden: 1
+      - m_Value: {x: 1, y: 0.3}
+        m_Name: ConeTextureDarkTiling
+        m_Overridden: 1
+    m_Vector3f:
+      m_Array:
+      - m_Value: {x: 0.5, y: 0.5, z: 3}
+        m_Name: RingBrightScale
+        m_Overridden: 1
+      - m_Value: {x: 0.4, y: 0.4, z: 2.8}
+        m_Name: RingDarkScale
+        m_Overridden: 1
+      - m_Value: {x: 1, y: 1, z: 2.5}
+        m_Name: ConeBrightScale
+        m_Overridden: 1
+      - m_Value: {x: 0.9, y: 0.6, z: 2.4}
+        m_Name: ConeDarkScale
+        m_Overridden: 1
+      - m_Value: {x: 0.2, y: 2, z: 0.2}
+        m_Name: FloatingParticlesVelocity
+        m_Overridden: 1
+    m_Vector4f:
+      m_Array:
+      - m_Value: {x: 13.610087, y: 73.85603, z: 0, w: 1}
+        m_Name: ConeColorBright
+        m_Overridden: 1
+      - m_Value: {x: 19.96641, y: 42.32659, z: 13.776108, w: 1}
+        m_Name: RingBrightColor
+        m_Overridden: 1
+      - m_Value: {x: 13.610087, y: 73.85603, z: 0, w: 1}
+        m_Name: CircleBright
+        m_Overridden: 1
+      - m_Value: {x: 42.32659, y: 42.32659, z: 42.32659, w: 1}
+        m_Name: FloatingParticlesColor
+        m_Overridden: 1
+      - m_Value: {x: 2, y: 2, z: 2, w: 1}
+        m_Name: ElectricityColor
+        m_Overridden: 1
+      - m_Value: {x: 0, y: 0, z: 0, w: 1}
+        m_Name: RingDarkColor
+        m_Overridden: 1
+      - m_Value: {x: 0.783543, y: 1, z: 0.7216981, w: 1}
+        m_Name: CircleDark
+        m_Overridden: 1
+    m_Uint:
+      m_Array: []
+    m_Int:
+      m_Array: []
+    m_Matrix4x4f:
+      m_Array: []
+    m_AnimationCurve:
+      m_Array:
+      - m_Value:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 1
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 34
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 0.9
+            value: 1
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 0.99194336
+            value: 0.009670258
+            inSlope: -16.004494
+            outSlope: -16.004494
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
+        m_Name: FadeCurve
+        m_Overridden: 0
+    m_Gradient:
+      m_Array: []
+    m_NamedObject:
+      m_Array:
+      - m_Value: {fileID: 2800000, guid: db2065ecabc70a6459c6fabda835e224, type: 3}
+        m_Name: RingBrightTexture
+        m_Overridden: 1
+      - m_Value: {fileID: 2800000, guid: db2065ecabc70a6459c6fabda835e224, type: 3}
+        m_Name: RingDarkTexture
+        m_Overridden: 1
+      - m_Value: {fileID: 2800000, guid: db2065ecabc70a6459c6fabda835e224, type: 3}
+        m_Name: ConeBrightTexture
+        m_Overridden: 1
+      - m_Value: {fileID: 2800000, guid: db2065ecabc70a6459c6fabda835e224, type: 3}
+        m_Name: ConeDarkTexture
+        m_Overridden: 1
+    m_Bool:
+      m_Array: []
+--- !u!73398921 &8632093124327900666
+VFXRenderer:
+  serializedVersion: 1
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1517764146515239082}
+  m_Enabled: 1
+  m_CastShadows: 1
+  m_ReceiveShadows: 0
+  m_DynamicOccludee: 1
+  m_StaticShadowCaster: 0
+  m_MotionVectors: 0
+  m_LightProbeUsage: 0
+  m_ReflectionProbeUsage: 0
+  m_RayTracingMode: 0
+  m_RayTraceProcedural: 0
+  m_RenderingLayerMask: 1
+  m_RendererPriority: 0
+  m_StaticBatchInfo:
+    firstSubMesh: 0
+    subMeshCount: 0
+  m_StaticBatchRoot: {fileID: 0}
+  m_ProbeAnchor: {fileID: 0}
+  m_LightProbeVolumeOverride: {fileID: 0}
+  m_ScaleInLightmap: 1
+  m_ReceiveGI: 1
+  m_PreserveUVs: 0
+  m_IgnoreNormalsForChartDetection: 0
+  m_ImportantGI: 0
+  m_StitchLightmapSeams: 1
+  m_SelectedEditorRenderState: 3
+  m_MinimumChartSize: 4
+  m_AutoUVMaxDistance: 0.5
+  m_AutoUVMaxAngle: 89
+  m_LightmapParameters: {fileID: 0}
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 0

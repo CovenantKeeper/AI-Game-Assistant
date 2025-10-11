@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: ed7be2cea6ed64dccba3f71922637259
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 63772
+  packageName: RPG Character Mecanim Animation Pack
+  packageVersion: 7.2.1
+  assetPath: Assets/ExplosiveLLC/RPG Character Mecanim Animation Pack/Code/Actions/SimpleActionHandler.cs
+  uploadId: 788702

@@ -1,0 +1,79 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 564641c11c1180040b4e806d9af42819, type: 3}
+  m_Name: CHR_Enoch
+  m_EditorClassIdentifier: TheCovenantKeepers.AI_Game_Assistant.Runtime::TheCovenantKeepers.AI_Game_Assistant.RpgCharacterSO
+  characterName: Enoch
+  class: Seer
+  faction: Covenant Keepers
+  type: Prophet
+  role: Leader
+  affiliation: Israel
+  element: Spirit
+  gender: Male
+  subClass: 
+  resourceType: Revelation
+  weaponType: 
+  modelPath: 
+  modelPrefab: {fileID: 0}
+  controller: {fileID: 0}
+  animatorPreset: {fileID: 0}
+  health: 780
+  mana: 350
+  attack: 90
+  defense: 120
+  magic: 200
+  speed: 28
+  strength: 0
+  agility: 0
+  intelligence: 0
+  armor: 0
+  magicResist: 0
+  attackSpeed: 0
+  moveSpeed: 0
+  range: 0
+  critChance: 0
+  critDamageMultiplier: 2
+  armorPenetration: 0
+  magicPenetration: 0
+  lifeSteal: 0
+  spellVamp: 0
+  cooldownReduction: 0
+  tenacity: 0
+  level: 0
+  loreBackground: Walked with God, granted divine visions.
+  ultimateAbility: Heavenly Vision
+  Idle: {fileID: 0}
+  Walk: {fileID: 0}
+  Run: {fileID: 0}
+  Jump: {fileID: 0}
+  Fall: {fileID: 0}
+  Land: {fileID: 0}
+  LightAttack: {fileID: 0}
+  HeavyAttack: {fileID: 0}
+  Block: {fileID: 0}
+  Dodge: {fileID: 0}
+  HitReact: {fileID: 0}
+  Death: {fileID: 0}
+  Ability1: {fileID: 0}
+  Ability2: {fileID: 0}
+  Ability3: {fileID: 0}
+  Ultimate: {fileID: 0}
+  passiveName: 45
+  passiveDescription: Seer's Insight
+  ability1Name: Grants vision of hidden paths.
+  ability1Description: Prophet's Warning
+  ability2Name: Slows enemies in a range.
+  ability2Description: Intercessor's Gift
+  ability3Name: Enhances an ally's defenses.
+  ability3Description: Holy Convocation
+  ultimateDescription: Summons celestial allies to battle.

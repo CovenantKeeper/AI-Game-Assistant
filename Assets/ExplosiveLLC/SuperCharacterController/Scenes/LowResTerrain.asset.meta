@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 197fe03831fd73a4c83e474bdd4db061
+timeCreated: 1448057141
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 63772
+  packageName: RPG Character Mecanim Animation Pack
+  packageVersion: 7.2.1
+  assetPath: Assets/ExplosiveLLC/SuperCharacterController/Scenes/LowResTerrain.asset
+  uploadId: 788702

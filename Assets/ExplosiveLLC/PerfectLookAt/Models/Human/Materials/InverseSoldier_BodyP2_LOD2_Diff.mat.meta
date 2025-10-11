@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 6f73ad31519116844a66a5a5db683ea0
+timeCreated: 1512826604
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 63772
+  packageName: RPG Character Mecanim Animation Pack
+  packageVersion: 7.2.1
+  assetPath: Assets/ExplosiveLLC/PerfectLookAt/Models/Human/Materials/InverseSoldier_BodyP2_LOD2_Diff.mat
+  uploadId: 788702
